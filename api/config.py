@@ -1,0 +1,32 @@
+"""Configuração centralizada da API via variáveis de ambiente."""
+
+from pydantic_settings import BaseSettings
+from pathlib import Path
+
+
+class Settings(BaseSettings):
+    """Settings da API de inferência."""
+
+    # Servidor
+    API_HOST: str = "0.0.0.0"
+    API_PORT: int = 8000
+
+    # Modelos
+    MODELS_PATH: str = str(Path(__file__).resolve().parents[1] / "resources" / "models")
+
+    # APIs externas (opcionais)
+    STEAM_API_KEY: str = ""
+    ITAD_API_KEY: str = ""
+
+    # Catálogo
+    STEAM_APPLIST_PATH: str = str(
+        Path(__file__).resolve().parents[1] / "resources" / "dados" / "steam_applist.json"
+    )
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"
+
+
+settings = Settings()

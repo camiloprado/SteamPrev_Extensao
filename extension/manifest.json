@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Previsor Steam",
+  "version": "1.0.0",
+  "description": "Previsão de preços de jogos na Steam usando Machine Learning",
+  "permissions": [],
+  "host_permissions": ["http://localhost:8000/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Previsor Steam",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,29 @@
+# ── Machine Learning (mesmas versões do projeto base) ─────────────────────────
+scikit-learn==1.7.0
+xgboost==3.0.4
+lightgbm==4.6.0
+joblib
+
+# ── Data Processing ───────────────────────────────────────────────────────────
+pandas==2.3.0
+numpy<2.0.0
+unidecode==1.4.0
+
+# ── API & HTTP ────────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+pydantic-settings
+httpx
+
+# ── Discord Bot ───────────────────────────────────────────────────────────────
+discord.py>=2.3.0
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+streamlit
+plotly
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+python-dotenv==1.0.0
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest>=8.0.0

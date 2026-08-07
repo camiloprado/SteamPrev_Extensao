@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400">
+  <title>Previsor Steam</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">🎮</div>
+    <div class="header-text">
+      <h1>Previsor Steam</h1>
+      <p>Previsão de Preços ML</p>
+    </div>
+    <div class="status-dot" id="statusDot" title="Verificando API..."></div>
+  </header>
+
+  <!-- Search -->
+  <div class="search-container">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Nome do jogo ou AppID..."
+      autocomplete="off"
+    >
+    <button id="searchBtn" class="btn-primary">
+      <span class="btn-icon">🔮</span>
+      <span>Prever</span>
+    </button>
+  </div>
+
+  <!-- Quick Games -->
+  <div class="quick-games" id="quickGames">
+    <button class="chip" data-query="Counter-Strike 2">CS2</button>
+    <button class="chip" data-query="ELDEN RING">Elden Ring</button>
+    <button class="chip" data-query="Stardew Valley">Stardew</button>
+    <button class="chip" data-query="Cyberpunk 2077">Cyberpunk</button>
+    <button class="chip" data-query="Terraria">Terraria</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Analisando dados...</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results" style="display: none;">
+    <!-- Game Info -->
+    <div class="game-card" id="gameCard">
+      <img id="gameImage" class="game-image" src="" alt="">
+      <div class="game-info">
+        <h2 id="gameName">—</h2>
+        <div class="game-meta">
+          <span class="badge" id="gamePrice">—</span>
+          <span class="badge badge-outline" id="gameReview">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classification -->
+    <div class="prediction-card" id="classCard">
+      <div class="prediction-header">
+        <span class="prediction-icon" id="classIcon">📊</span>
+        <span class="prediction-title">Direção do Preço</span>
+      </div>
+      <div class="prediction-value" id="classValue">—</div>
+      <div class="confidence-bar">
+        <div class="confidence-label">Confiança</div>
+        <div class="bar-container">
+          <div class="bar-fill" id="confidenceBar"></div>
+        </div>
+        <div class="confidence-value" id="confidenceValue">0%</div>
+      </div>
+      <div class="probabilities" id="probabilities"></div>
+    </div>
+
+    <!-- Regression -->
+    <div class="prediction-card" id="regCard">
+      <div class="prediction-header">
+        <span class="prediction-icon">⏳</span>
+        <span class="prediction-title">Próxima Promoção</span>
+      </div>
+      <div class="prediction-value days" id="regValue">—</div>
+      <div class="prediction-desc" id="regDesc">—</div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error" id="error" style="display: none;">
+    <span class="error-icon">❌</span>
+    <p id="errorMsg">Erro desconhecido</p>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>Previsor Steam v1.0</span>
+    <a href="http://localhost:8000/docs" target="_blank" id="apiLink">API Docs</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
