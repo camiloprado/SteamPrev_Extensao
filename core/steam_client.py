@@ -1,157 +1,123 @@
 """
-Cliente mockado da Steam Store API.
-Retorna dados simulados para desenvolvimento e testes.
-Preparado para substituição por chamadas reais à API.
+Cliente da Steam Store API.
+Responsável por buscar os dados reais de jogos na Steam via HTTP.
 """
 
 import logging
-from datetime import datetime, timedelta
-import random
+import httpx
+import time
+from datetime import datetime
 
 logger = logging.getLogger("core.steam_client")
 
-# Dados mockados de jogos populares
-MOCK_GAMES = {
-    730: {
-        "name": "Counter-Strike 2",
-        "appid": 730,
-        "is_free": True,
-        "price": 0.0,
-        "review_score": 83,
-        "total_reviews": 7500000,
-        "release_date": "2012-08-21",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg",
-    },
-    1245620: {
-        "name": "ELDEN RING",
-        "appid": 1245620,
-        "is_free": False,
-        "price": 249.90,
-        "review_score": 81,
-        "total_reviews": 650000,
-        "release_date": "2022-02-25",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/header.jpg",
-    },
-    413150: {
-        "name": "Stardew Valley",
-        "appid": 413150,
-        "is_free": False,
-        "price": 24.99,
-        "review_score": 97,
-        "total_reviews": 600000,
-        "release_date": "2016-02-26",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/413150/header.jpg",
-    },
-    1091500: {
-        "name": "Cyberpunk 2077",
-        "appid": 1091500,
-        "is_free": False,
-        "price": 199.90,
-        "review_score": 76,
-        "total_reviews": 800000,
-        "release_date": "2020-12-10",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/header.jpg",
-    },
-    892970: {
-        "name": "Valheim",
-        "appid": 892970,
-        "is_free": False,
-        "price": 69.99,
-        "review_score": 95,
-        "total_reviews": 400000,
-        "release_date": "2021-02-02",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/892970/header.jpg",
-    },
-    570: {
-        "name": "Dota 2",
-        "appid": 570,
-        "is_free": True,
-        "price": 0.0,
-        "review_score": 77,
-        "total_reviews": 2000000,
-        "release_date": "2013-07-09",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570/header.jpg",
-    },
-    1174180: {
-        "name": "Red Dead Redemption 2",
-        "appid": 1174180,
-        "is_free": False,
-        "price": 299.90,
-        "review_score": 85,
-        "total_reviews": 450000,
-        "release_date": "2019-12-05",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/header.jpg",
-    },
-    105600: {
-        "name": "Terraria",
-        "appid": 105600,
-        "is_free": False,
-        "price": 39.99,
-        "review_score": 97,
-        "total_reviews": 1000000,
-        "release_date": "2011-05-16",
-        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg",
-    },
-}
+CON_STR_STEAM_API_URL = "https://store.steampowered.com/api/appdetails"
 
-
-def _generate_mock_price(base_price: float) -> float:
-    """Gera preço com pequena variação aleatória."""
-    if base_price == 0:
-        return 0.0
-    variation = random.uniform(-0.15, 0.05)
-    return round(max(base_price * (1 + variation), base_price * 0.3), 2)
-
-
-def _generate_default_mock(appid: int) -> dict:
-    """Gera dados mockados genéricos para AppIDs desconhecidos."""
-    return {
-        "name": f"Jogo Steam #{appid}",
-        "appid": appid,
-        "is_free": False,
-        "price": round(random.uniform(19.99, 299.90), 2),
-        "review_score": random.randint(50, 95),
-        "total_reviews": random.randint(100, 50000),
-        "release_date": f"{random.randint(2015, 2025)}-{random.randint(1,12):02d}-{random.randint(1,28):02d}",
-        "header_image": f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg",
-    }
-
+_steam_cache = {}
+CON_INT_CACHE_TTL = 300  # 5 minutos
 
 class SteamClient:
     """
     Cliente para a Steam Store API.
-    Implementação mockada para desenvolvimento.
+    Implementação real que consome os endpoints oficiais.
     """
 
     @staticmethod
-    def get_game_data(appid: int) -> dict | None:
+    async def get_game_data(arg_intAppid: int) -> dict | None:
         """
-        Obtém dados de um jogo pelo AppID.
+        Obtém dados de um jogo pelo AppID chamando a Steam Store API.
 
         Parâmetros:
-        - appid (int): AppID do jogo na Steam.
+        - arg_intAppid (int): AppID do jogo na Steam.
 
         Retorna:
-        - dict | None: Dados do jogo ou None se não encontrado.
+        Retorna:
+        - dict | None: Dados do jogo parseados ou None se falhar.
         """
-        if appid in MOCK_GAMES:
-            logger.debug(f"Steam mock: retornando dados de {MOCK_GAMES[appid]['name']}")
-            return MOCK_GAMES[appid].copy()
+        var_floatNow = time.time()
+        if arg_intAppid in _steam_cache:
+            var_dictCachedData, var_floatTimestamp = _steam_cache[arg_intAppid]
+            if var_floatNow - var_floatTimestamp < CON_INT_CACHE_TTL:
+                logger.info(f"Steam API: Retornando appid {arg_intAppid} do cache local.")
+                return var_dictCachedData
 
-        # Gera dados genéricos para AppIDs desconhecidos
-        logger.debug(f"Steam mock: gerando dados genéricos para AppID {appid}")
-        return _generate_default_mock(appid)
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as var_objClient:
+                var_objResponse = await var_objClient.get(
+                    CON_STR_STEAM_API_URL,
+                    params={"appids": str(arg_intAppid), "cc": "br"}
+                )
+                var_objResponse.raise_for_status()
+                var_dictJson = var_objResponse.json()
+
+                var_strAppid = str(arg_intAppid)
+                if var_strAppid not in var_dictJson or not var_dictJson[var_strAppid].get("success"):
+                    logger.warning(f"Steam API: Falha ao obter dados (sucesso=false) para appid {arg_intAppid}")
+                    return None
+
+                var_dictData = var_dictJson[var_strAppid]["data"]
+
+                # Parse de preço
+                var_boolIsFree = var_dictData.get("is_free", False)
+                var_floatPrice = 0.0
+                var_intDiscountPercent = 0
+                var_boolIsOnSale = False
+                
+                if not var_boolIsFree:
+                    if "price_overview" in var_dictData:
+                        try:
+                            var_dictPriceOverview = var_dictData["price_overview"]
+                            if "final" not in var_dictPriceOverview:
+                                raise ValueError("Chave 'final' não encontrada no nó 'price_overview'.")
+                            
+                            var_intFinalRaw = int(var_dictPriceOverview["final"])
+                            var_floatPrice = round(var_intFinalRaw / 100.0, 2)
+                            var_intDiscountPercent = int(var_dictPriceOverview.get("discount_percent", 0))
+                            var_boolIsOnSale = var_intDiscountPercent > 0
+                        except (ValueError, TypeError, KeyError) as e:
+                            logger.error(f"Steam API: Erro crítico de parsing de preço para appid {arg_intAppid}. Estrutura JSON possivelmente alterada. Detalhes: {e}")
+                            raise ValueError(f"Falha no parser de preço da Steam: {e}")
+                    else:
+                        # Jogos pagos sem price_overview não estão à venda (ex: removidos da loja)
+                        var_floatPrice = 0.0
+
+                # Parse reviews (appdetails tem metacritic)
+                var_intReviewScore = 0
+                if "metacritic" in var_dictData:
+                    var_intReviewScore = var_dictData["metacritic"].get("score", 0)
+                else:
+                    var_intReviewScore = 50 # Default safe fallback
+
+                # Monta dict compatível com a inferência
+                var_dictResult = {
+                    "name": var_dictData.get("name", f"Jogo {arg_intAppid}"),
+                    "appid": arg_intAppid,
+                    "is_free": var_boolIsFree,
+                    "price": var_floatPrice,
+                    "discount_percent": var_intDiscountPercent,
+                    "is_on_sale": var_boolIsOnSale,
+                    "sale_end_date": None, # Placeholder futuramente consumível via ITAD/web scraping
+                    "review_score": var_intReviewScore,
+                    "total_reviews": 1000,
+                    "release_date": var_dictData.get("release_date", {}).get("date", "2020-01-01"),
+                    "header_image": var_dictData.get("header_image", ""),
+                }
+                _steam_cache[arg_intAppid] = (var_dictResult, var_floatNow)
+                return var_dictResult
+
+        except Exception as e:
+            logger.error(f"Steam API: Erro HTTP ao buscar appid {arg_intAppid}: {e}")
+            return None
 
     @staticmethod
-    def get_game_price(appid: int) -> float:
+    async def get_game_price(arg_intAppid: int) -> float:
         """
-        Obtém o preço atual de um jogo.
+        Obtém apenas o preço atual de um jogo.
 
         Parâmetros:
-        - appid (int): AppID do jogo.
+        - arg_intAppid (int): AppID do jogo.
 
         Retorna:
         - float: Preço do jogo em BRL.
         """
-        data = SteamClient.get_game_data(appid)
-        return data["price"] if data else 0.0
+        var_dictData = await SteamClient.get_game_data(arg_intAppid)
+        return var_dictData["price"] if var_dictData else 0.0
