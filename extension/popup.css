@@ -66,18 +66,101 @@ body {
   color: var(--text-secondary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  padding: 2px;
+}
+
+.settings-btn:hover {
+  opacity: 1;
+  transform: rotate(45deg);
+}
+
 .status-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--text-secondary);
-  margin-left: auto;
   transition: background 0.3s ease;
   box-shadow: 0 0 6px currentColor;
 }
 
 .status-dot.online { background: var(--accent-green); color: var(--accent-green); }
 .status-dot.offline { background: var(--accent-red); color: var(--accent-red); }
+
+/* ── Settings Panel ── */
+.settings-panel {
+  padding: 12px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  animation: fadeIn 0.2s ease;
+}
+
+.settings-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.settings-input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-input-group input {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.settings-input-group input:focus {
+  border-color: var(--accent-purple);
+}
+
+.btn-save {
+  padding: 7px 12px;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--accent-purple);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-save:hover {
+  background: rgba(124, 58, 237, 0.3);
+}
+
+.settings-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
 
 /* ── Search ── */
 .search-container {

@@ -15,30 +15,36 @@
       <h1>Previsor Steam</h1>
       <p>Previsão de Preços ML</p>
     </div>
-    <div class="status-dot" id="statusDot" title="Verificando API..."></div>
+    <div class="header-actions">
+      <button class="settings-btn" id="settingsToggle" title="Configurações">⚙️</button>
+      <div class="status-dot" id="statusDot" title="Verificando API..."></div>
+    </div>
   </header>
 
-  <!-- Search -->
-  <div class="search-container">
-    <input
-      type="text"
-      id="searchInput"
-      placeholder="Nome do jogo ou AppID..."
-      autocomplete="off"
-    >
-    <button id="searchBtn" class="btn-primary">
-      <span class="btn-icon">🔮</span>
-      <span>Prever</span>
-    </button>
-  </div>
-
-  <!-- Quick Games -->
-  <div class="quick-games" id="quickGames">
-    <button class="chip" data-query="Counter-Strike 2">CS2</button>
-    <button class="chip" data-query="ELDEN RING">Elden Ring</button>
-    <button class="chip" data-query="Stardew Valley">Stardew</button>
-    <button class="chip" data-query="Cyberpunk 2077">Cyberpunk</button>
-    <button class="chip" data-query="Terraria">Terraria</button>
+  <!-- Settings Panel (toggle via JS) -->
+  <div class="settings-panel" id="settingsPanel" style="display: none;">
+    <label class="settings-label" for="apiUrlInput">🔗 URL da API:</label>
+    <div class="settings-input-group">
+      <input
+        type="url"
+        id="apiUrlInput"
+        placeholder="http://localhost:8000"
+        value="http://localhost:8000"
+      >
+      <button id="saveApiBtn" class="btn-save">💾 Salvar</button>
+    </div>
+    
+    <label class="settings-label" style="margin-top: 10px;" for="horizonSelect">⏱️ Horizonte da Previsão:</label>
+    <div class="settings-input-group">
+      <select id="horizonSelect" class="horizon-select">
+        <option value="latest">Padrão</option>
+        <option value="30d_latest">Curto (30 Dias)</option>
+        <option value="60d_latest">Médio (60 Dias)</option>
+        <option value="90d_latest">Longo (90 Dias)</option>
+      </select>
+    </div>
+    
+    <p class="settings-hint">Compatível com Chrome, Opera e Brave</p>
   </div>
 
   <!-- Loading -->
@@ -59,6 +65,16 @@
           <span class="badge badge-outline" id="gameReview">—</span>
         </div>
       </div>
+    </div>
+
+    <!-- Sale Banner -->
+    <div class="prediction-card" id="saleCard" style="display: none; background: rgba(46, 213, 115, 0.1); border-color: rgba(46, 213, 115, 0.3);">
+      <div class="prediction-header" style="color: #2ed573;">
+        <span class="prediction-icon">🎉</span>
+        <span class="prediction-title">Desconto Ativo!</span>
+      </div>
+      <div class="prediction-value days" id="saleValue" style="color: #2ed573; font-size: 1.2rem;">—</div>
+      <div class="prediction-desc" id="saleDesc" style="color: #a4b0be; margin-top: 5px;">A predição é abortada para jogos que já se encontram em promoção.</div>
     </div>
 
     <!-- Classification -->
@@ -97,7 +113,7 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <span>Previsor Steam v1.0</span>
+    <span>Previsor Steam v1.0 • Chrome | Opera | Brave</span>
     <a href="http://localhost:8000/docs" target="_blank" id="apiLink">API Docs</a>
   </footer>
 
