@@ -11,16 +11,19 @@ router = APIRouter(tags=["Health"])
 async def health_check(request: Request):
     """
     Verifica se a API está online e se os modelos foram carregados.
-    """
-    model_manager = request.app.state.model_manager
-    models_status = model_manager.get_status()
 
-    status = "healthy" if models_status["classificacao"] or models_status["regressao"] else "degraded"
-    if not models_status["loaded"]:
-        status = "unhealthy"
+    Retorna:
+    - HealthResponse: Status da API e dos modelos.
+    """
+    var_objModelManager = request.app.state.model_manager
+    var_dictModelosStatus = var_objModelManager.get_status()
+
+    var_strStatus = "healthy" if var_dictModelosStatus["classificacao"] or var_dictModelosStatus["regressao"] else "degraded"
+    if not var_dictModelosStatus["loaded"]:
+        var_strStatus = "unhealthy"
 
     return HealthResponse(
-        status=status,
-        models=models_status,
+        status=var_strStatus,
+        models=var_dictModelosStatus,
         timestamp=datetime.now().isoformat(),
     )

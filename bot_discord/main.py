@@ -27,12 +27,12 @@ class PrevisorBot(commands.Bot):
     """Bot do Previsor Steam com slash commands."""
 
     def __init__(self):
-        intents = discord.Intents.default()
-        intents.message_content = True
+        var_objIntents = discord.Intents.default()
+        var_objIntents.message_content = True
 
         super().__init__(
             command_prefix="!",
-            intents=intents,
+            intents=var_objIntents,
             description="🎮 Previsor Steam — Previsão de preços de jogos",
         )
 
@@ -42,10 +42,11 @@ class PrevisorBot(commands.Bot):
         logger.info("✅ Cog predictor carregada")
 
         # Sincroniza slash commands
-        synced = await self.tree.sync()
-        logger.info(f"✅ {len(synced)} comando(s) sincronizado(s)")
+        var_listSynced = await self.tree.sync()
+        logger.info(f"✅ {len(var_listSynced)} comando(s) sincronizado(s)")
 
     async def on_ready(self):
+        """Evento disparado quando o bot está conectado e pronto."""
         logger.info("═" * 60)
         logger.info(f"🤖 Bot conectado como: {self.user}")
         logger.info(f"   ID: {self.user.id}")
@@ -63,16 +64,16 @@ class PrevisorBot(commands.Bot):
 
 def main():
     """Inicia o bot."""
-    token = os.getenv("DISCORD_TOKEN")
+    var_strToken = os.getenv("DISCORD_TOKEN")
 
-    if not token or token == "seu_token_do_discord_aqui":
+    if not var_strToken or var_strToken == "seu_token_do_discord_aqui":
         logger.error("❌ DISCORD_TOKEN não configurado!")
         logger.error("   Configure o token no arquivo .env")
         logger.error("   Crie um bot em: https://discord.com/developers/applications")
         sys.exit(1)
 
-    bot = PrevisorBot()
-    bot.run(token, log_handler=None)
+    var_objBot = PrevisorBot()
+    var_objBot.run(var_strToken, log_handler=None)
 
 
 if __name__ == "__main__":

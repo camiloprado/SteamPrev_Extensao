@@ -8,7 +8,7 @@ from discord.ext import commands
 import logging
 
 from bot_discord.api_client import APIClient
-from bot_discord.embeds import embed_previsao, embed_status, embed_busca, embed_erro
+from bot_discord.embeds import embed_previsao, embed_status, embed_erro
 
 logger = logging.getLogger("bot.predictor")
 
@@ -18,31 +18,54 @@ class PredictorCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.api_client = APIClient()
+        self._var_objApiClient = APIClient()
 
     async def cog_unload(self):
-        await self.api_client.close()
+        """Libera recursos ao descarregar a cog."""
+        await self._var_objApiClient.close()
 
     @app_commands.command(name="prever", description="Prevê a direção do preço de um jogo da Steam")
-    @app_commands.describe(jogo="Nome do jogo (ex: 'Elden Ring', 'Stardew Valley', 'Counter-Strike')")
-    async def prever(self, interaction: discord.Interaction, jogo: str):
+    @app_commands.describe(
+        appid="AppID numérico do jogo (ex: 1245620)",
+        horizonte="Horizonte de tempo para previsão"
+    )
+    @app_commands.choices(horizonte=[
+        app_commands.Choice(name="Padrão (Latest)", value="latest"),
+        app_commands.Choice(name="30 Dias", value="30d_latest"),
+        app_commands.Choice(name="60 Dias", value="60d_latest"),
+        app_commands.Choice(name="90 Dias", value="90d_latest"),
+    ])
+    async def prever(
+        self, 
+        interaction: discord.Interaction, 
+        appid: str, 
+        horizonte: app_commands.Choice[str] = None
+    ):
         """
-        Faz a previsão completa de um jogo.
-        Aceita nome do jogo (busca aproximada).
+        Faz a previsão completa de um jogo usando estritamente o AppID.
         """
         await interaction.response.defer(thinking=True)
 
-        try:
-            result = await self.api_client.predict_game(jogo)
+        if not appid.isdigit():
+            await interaction.followup.send(
+                embed=embed_erro("Por favor, forneça apenas o **AppID numérico** do jogo. Buscas por nome não são mais suportadas."),
+                ephemeral=True,
+            )
+            return
 
-            if result is None:
+        horizonte_value = horizonte.value if horizonte else "latest"
+
+        try:
+            var_dictResult = await self._var_objApiClient.predict_game(appid, horizonte_value)
+
+            if var_dictResult is None:
                 await interaction.followup.send(
-                    embed=embed_erro(f"Jogo não encontrado: **{jogo}**\n\nUse `/buscar` para procurar o nome correto."),
+                    embed=embed_erro(f"Jogo não encontrado ou erro na API para o AppID: **{appid}**"),
                     ephemeral=True,
                 )
                 return
 
-            await interaction.followup.send(embed=embed_previsao(result))
+            await interaction.followup.send(embed=embed_previsao(var_dictResult))
 
         except Exception as e:
             logger.error(f"Erro no /prever: {e}")
@@ -51,21 +74,7 @@ class PredictorCog(commands.Cog):
                 ephemeral=True,
             )
 
-    @app_commands.command(name="buscar", description="Busca jogos na Steam pelo nome")
-    @app_commands.describe(nome="Nome do jogo para buscar")
-    async def buscar(self, interaction: discord.Interaction, nome: str):
-        """Busca jogos pelo nome com resultado fuzzy."""
-        await interaction.response.defer(thinking=True)
 
-        try:
-            results = await self.api_client.search_games(nome, limit=10)
-            await interaction.followup.send(embed=embed_busca(results, nome))
-        except Exception as e:
-            logger.error(f"Erro no /buscar: {e}")
-            await interaction.followup.send(
-                embed=embed_erro(f"Erro na busca: {str(e)}"),
-                ephemeral=True,
-            )
 
     @app_commands.command(name="status", description="Verifica o status da API de previsão")
     async def status(self, interaction: discord.Interaction):
@@ -73,8 +82,8 @@ class PredictorCog(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         try:
-            health = await self.api_client.health()
-            await interaction.followup.send(embed=embed_status(health))
+            var_dictHealth = await self._var_objApiClient.health()
+            await interaction.followup.send(embed=embed_status(var_dictHealth))
         except Exception as e:
             logger.error(f"Erro no /status: {e}")
             await interaction.followup.send(

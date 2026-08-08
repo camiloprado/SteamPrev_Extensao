@@ -12,6 +12,8 @@ build/
 .venv/
 venv/
 ENV/
+/.venv*/
+/env/
 
 # Environment variables
 .env
@@ -31,9 +33,47 @@ resources/models/*.joblib
 
 # Logs
 *.log
+resources/logs/
 
 # Docker
 docker-compose.override.yml
 
 # Streamlit
 .streamlit/
+
+# -------------------------------------------------------------------
+# Adições para dados sensíveis (espelhando projeto base)
+# -------------------------------------------------------------------
+
+# Arquivos de chaves, certificados e credenciais
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
+client_secret.json
+
+# Bancos de dados locais (podem conter dados sensíveis)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs de output do bot
+bot_error.txt
+bot_output.txt
+
+# Dados e exports
+resources/dados/*.csv
+resources/relatorios/
+
+# Jupyter notebooks (podem conter outputs com dados sensíveis)
+*.ipynb
+
+# Arquivos temporários
+*.temp
+*temp_
+
+# Pytest cache
+.pytest_cache/
+.mypy_cache/

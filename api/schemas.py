@@ -10,8 +10,12 @@ class GameQueryInput(BaseModel):
     """Input que aceita AppID ou nome do jogo."""
     query: str = Field(
         ...,
-        description="AppID (número) ou nome do jogo. Aceita nomes aproximados.",
-        examples=["730", "Counter-Strike", "Elden Ring", "stardew valley"],
+        description="AppID numérico do jogo.",
+        examples=["730", "1245620"],
+    )
+    horizonte: str = Field(
+        default="latest",
+        description="Horizonte da previsão: 'latest', '30d_latest', '60d_latest', '90d_latest'",
     )
 
 
@@ -46,6 +50,9 @@ class GameInfo(BaseModel):
     price: Optional[float] = None
     review_score: Optional[float] = None
     header_image: Optional[str] = None
+    discount_percent: int = Field(default=0, description="Percentual de desconto atual")
+    is_on_sale: bool = Field(default=False, description="True se o jogo estiver em promoção")
+    sale_end_date: Optional[str] = Field(default=None, description="Data de término da promoção (se disponível)")
 
 
 class ClassificationResult(BaseModel):

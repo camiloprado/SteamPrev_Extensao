@@ -5,7 +5,6 @@ Carrega na inicialização e suporta hot-reload via timestamp do arquivo.
 
 import joblib
 import logging
-import os
 from pathlib import Path
 from datetime import datetime
 
@@ -15,90 +14,115 @@ logger = logging.getLogger("api.models_loader")
 class ModelManager:
     """Gerencia o carregamento e reload dos modelos de ML."""
 
-    def __init__(self, models_path: str):
-        self.models_path = Path(models_path)
-        self.classificacao_model = None
-        self.regressao_model = None
-        self.pipeline_escalonamento = None
-        self._classificacao_mtime: float = 0.0
-        self._regressao_mtime: float = 0.0
-        self._loaded = False
+    def __init__(self, arg_strModelsPath: str):
+        self._var_pathModels = Path(arg_strModelsPath)
+        self._var_objClassificacaoModel = None
+        self._var_objRegressaoModel = None
+        self._var_objPipelineEscalonamento = None
+        self._var_floatClassificacaoMtime: float = 0.0
+        self._var_floatRegressaoMtime: float = 0.0
+        self._var_boolLoaded = False
+        self._var_strCurrentHorizon = None
 
     def load_models(self) -> None:
-        """Carrega todos os modelos .joblib do diretório configurado."""
-        logger.info(f"Carregando modelos de: {self.models_path}")
-
-        # Classificação XGBoost
-        clf_path = self.models_path / "modelo_classificacao_XGBoost_latest.joblib"
-        if clf_path.exists():
-            self.classificacao_model = joblib.load(clf_path)
-            self._classificacao_mtime = clf_path.stat().st_mtime
-            logger.info(f"✅ Classificação carregado: {clf_path.name}")
-        else:
-            logger.warning(f"⚠️ Modelo de classificação não encontrado: {clf_path}")
-
-        # Regressão XGBoost
-        reg_path = self.models_path / "modelo_regressao_XGBoost_latest.joblib"
-        if reg_path.exists():
-            self.regressao_model = joblib.load(reg_path)
-            self._regressao_mtime = reg_path.stat().st_mtime
-            logger.info(f"✅ Regressão carregado: {reg_path.name}")
-        else:
-            logger.warning(f"⚠️ Modelo de regressão não encontrado: {reg_path}")
-
-        # Pipeline de escalonamento (se existir)
-        pipe_path = self.models_path / "pipeline_escalonamento.joblib"
-        if pipe_path.exists():
-            self.pipeline_escalonamento = joblib.load(pipe_path)
-            logger.info(f"✅ Pipeline escalonamento carregado: {pipe_path.name}")
-
-        self._loaded = True
-        logger.info("Carregamento de modelos concluído.")
-
-    def check_and_reload(self) -> bool:
         """
-        Verifica se os modelos foram atualizados e recarrega se necessário.
-
-        Retorna:
-        - bool: True se houve reload, False caso contrário.
+        Carrega inicialmente os modelos base.
         """
-        reloaded = False
+        import gc
+        logger.info(f"Carregando pipeline de: {self._var_pathModels}")
 
-        clf_path = self.models_path / "modelo_classificacao_XGBoost_latest.joblib"
-        if clf_path.exists() and clf_path.stat().st_mtime > self._classificacao_mtime:
-            logger.info("🔄 Detectada atualização no modelo de classificação. Recarregando...")
-            self.classificacao_model = joblib.load(clf_path)
-            self._classificacao_mtime = clf_path.stat().st_mtime
-            reloaded = True
+        # Pipeline de escalonamento (único para todos os modelos)
+        var_pathPipeline = self._var_pathModels / "pipeline_escalonamento.joblib"
+        if var_pathPipeline.exists():
+            self._var_objPipelineEscalonamento = joblib.load(var_pathPipeline)
+            logger.info(f"✅ Pipeline escalonamento carregado: {var_pathPipeline.name}")
 
-        reg_path = self.models_path / "modelo_regressao_XGBoost_latest.joblib"
-        if reg_path.exists() and reg_path.stat().st_mtime > self._regressao_mtime:
-            logger.info("🔄 Detectada atualização no modelo de regressão. Recarregando...")
-            self.regressao_model = joblib.load(reg_path)
-            self._regressao_mtime = reg_path.stat().st_mtime
-            reloaded = True
+        self._var_boolLoaded = True
+        # Defer model loading to endpoint execution
+        self.ensure_models_for_horizon("latest")
 
-        return reloaded
+    def ensure_models_for_horizon(self, horizonte: str) -> bool:
+        """
+        Garante que o modelo correspondente ao horizonte está na memória.
+        Libera o antigo usando gc.collect() para evitar sobrecarga.
+        Suporta hot-reload se o timestamp do arquivo mudar.
+        """
+        var_boolReloaded = False
+        import gc
+
+        var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
+        var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
+        
+        # Fallback para regressão latest se não houver um específico pro horizonte
+        if not var_pathRegressao.exists():
+            var_pathRegressao = self._var_pathModels / "modelo_regressao_XGBoost_latest.joblib"
+
+        var_boolHorizonChanged = self._var_strCurrentHorizon != horizonte
+
+        # Checa atualização do arquivo de Classificação ou mudança de horizonte
+        if var_pathClassificacao.exists():
+            if var_boolHorizonChanged or var_pathClassificacao.stat().st_mtime > self._var_floatClassificacaoMtime:
+                logger.info(f"🔄 Trocando/Recarregando modelo de classificação para horizonte: {horizonte}")
+                self._var_objClassificacaoModel = None
+                gc.collect() # Libera RAM do modelo antigo
+                self._var_objClassificacaoModel = joblib.load(var_pathClassificacao)
+                self._var_floatClassificacaoMtime = var_pathClassificacao.stat().st_mtime
+                var_boolReloaded = True
+
+        # Checa atualização do arquivo de Regressão
+        if var_pathRegressao.exists():
+            if var_boolHorizonChanged or var_pathRegressao.stat().st_mtime > self._var_floatRegressaoMtime:
+                logger.info(f"🔄 Trocando/Recarregando modelo de regressão para horizonte: {horizonte}")
+                self._var_objRegressaoModel = None
+                gc.collect()
+                self._var_objRegressaoModel = joblib.load(var_pathRegressao)
+                self._var_floatRegressaoMtime = var_pathRegressao.stat().st_mtime
+                var_boolReloaded = True
+
+        self._var_strCurrentHorizon = horizonte
+        return var_boolReloaded
 
     @property
     def is_loaded(self) -> bool:
         """Verifica se os modelos foram carregados."""
-        return self._loaded
+        return self._var_boolLoaded
 
     @property
     def classificacao_available(self) -> bool:
-        return self.classificacao_model is not None
+        """Verifica se o modelo de classificação está disponível."""
+        return self._var_objClassificacaoModel is not None
 
     @property
     def regressao_available(self) -> bool:
-        return self.regressao_model is not None
+        """Verifica se o modelo de regressão está disponível."""
+        return self._var_objRegressaoModel is not None
+
+    @property
+    def classificacao_model(self):
+        """Retorna o modelo de classificação carregado."""
+        return self._var_objClassificacaoModel
+
+    @property
+    def regressao_model(self):
+        """Retorna o modelo de regressão carregado."""
+        return self._var_objRegressaoModel
+
+    @property
+    def pipeline_escalonamento(self):
+        """Retorna o pipeline de escalonamento carregado."""
+        return self._var_objPipelineEscalonamento
 
     def get_status(self) -> dict:
-        """Retorna status dos modelos carregados."""
+        """
+        Retorna status dos modelos carregados.
+
+        Retorna:
+        - dict: Dicionário com status de cada modelo.
+        """
         return {
-            "loaded": self._loaded,
+            "loaded": self._var_boolLoaded,
             "classificacao": self.classificacao_available,
             "regressao": self.regressao_available,
-            "pipeline_escalonamento": self.pipeline_escalonamento is not None,
-            "models_path": str(self.models_path),
+            "pipeline_escalonamento": self._var_objPipelineEscalonamento is not None,
+            "models_path": str(self._var_pathModels),
         }

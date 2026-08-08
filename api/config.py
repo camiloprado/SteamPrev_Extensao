@@ -4,8 +4,11 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 
 
-class Settings(BaseSettings):
-    """Settings da API de inferência."""
+class APISettings(BaseSettings):
+    """
+    Settings da API de inferência.
+    Renomeada para APISettings para evitar colisão com a classe Settings do projeto base.
+    """
 
     # Servidor
     API_HOST: str = "0.0.0.0"
@@ -29,4 +32,4 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-settings = Settings()
+api_settings = APISettings()

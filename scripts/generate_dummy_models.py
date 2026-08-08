@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 # Features (mesma ordem do treinamento real)
-FEATURE_COLUMNS = [
+CON_LIST_FEATURE_COLUMNS = [
     "review_score",
     "preco_catalogo",
     "preco_atual_hist",
@@ -38,76 +38,84 @@ FEATURE_COLUMNS = [
 ]
 
 
-def generate_synthetic_data(n_samples: int = 5000) -> pd.DataFrame:
-    """Gera dados sintéticos realistas para treinamento."""
+def gerar_dados_sinteticos(arg_intNumSamples: int = 5000) -> pd.DataFrame:
+    """
+    Gera dados sintéticos realistas para treinamento.
+
+    Parâmetros:
+    - arg_intNumSamples (int): Número de amostras a gerar.
+
+    Retorna:
+    - pd.DataFrame: DataFrame com dados sintéticos e alvos.
+    """
     np.random.seed(42)
 
-    data = {
-        "review_score": np.random.uniform(30, 100, n_samples),
-        "preco_catalogo": np.random.uniform(10, 300, n_samples),
-        "preco_atual_hist": np.random.uniform(10, 300, n_samples),
-        "preco_media_janela": np.random.uniform(10, 250, n_samples),
-        "preco_std_janela": np.random.uniform(0, 50, n_samples),
-        "preco_min_janela": np.random.uniform(5, 150, n_samples),
-        "preco_max_janela": np.random.uniform(50, 350, n_samples),
-        "frequencia_descontos_por_ano": np.random.uniform(0, 15, n_samples),
-        "dias_no_preco_atual": np.random.randint(0, 365, n_samples),
-        "ratio_preco_atual_vs_minimo": np.random.uniform(1.0, 5.0, n_samples),
-        "desconto_medio_janela": np.random.uniform(0, 50, n_samples),
-        "desconto_max_janela": np.random.uniform(0, 80, n_samples),
-        "num_promocoes_janela": np.random.randint(0, 30, n_samples),
-        "dias_janela": np.random.randint(30, 1800, n_samples),
-        "dias_desde_ultimo_desconto": np.random.randint(0, 9999, n_samples),
-        "mes_atual": np.random.randint(1, 13, n_samples),
-        "dia_do_ano": np.random.randint(1, 366, n_samples),
-        "dias_para_proxima_grande_promo": np.random.randint(0, 200, n_samples),
+    var_dictData = {
+        "review_score": np.random.uniform(30, 100, arg_intNumSamples),
+        "preco_catalogo": np.random.uniform(10, 300, arg_intNumSamples),
+        "preco_atual_hist": np.random.uniform(10, 300, arg_intNumSamples),
+        "preco_media_janela": np.random.uniform(10, 250, arg_intNumSamples),
+        "preco_std_janela": np.random.uniform(0, 50, arg_intNumSamples),
+        "preco_min_janela": np.random.uniform(5, 150, arg_intNumSamples),
+        "preco_max_janela": np.random.uniform(50, 350, arg_intNumSamples),
+        "frequencia_descontos_por_ano": np.random.uniform(0, 15, arg_intNumSamples),
+        "dias_no_preco_atual": np.random.randint(0, 365, arg_intNumSamples),
+        "ratio_preco_atual_vs_minimo": np.random.uniform(1.0, 5.0, arg_intNumSamples),
+        "desconto_medio_janela": np.random.uniform(0, 50, arg_intNumSamples),
+        "desconto_max_janela": np.random.uniform(0, 80, arg_intNumSamples),
+        "num_promocoes_janela": np.random.randint(0, 30, arg_intNumSamples),
+        "dias_janela": np.random.randint(30, 1800, arg_intNumSamples),
+        "dias_desde_ultimo_desconto": np.random.randint(0, 9999, arg_intNumSamples),
+        "mes_atual": np.random.randint(1, 13, arg_intNumSamples),
+        "dia_do_ano": np.random.randint(1, 366, arg_intNumSamples),
+        "dias_para_proxima_grande_promo": np.random.randint(0, 200, arg_intNumSamples),
     }
 
-    df = pd.DataFrame(data)
+    var_dfDados = pd.DataFrame(var_dictData)
 
     # Alvo classificação: lógica simples baseada em features
     # Mais promoções + perto de sale sazonal → mais chance de "cai"
-    score = (
-        df["frequencia_descontos_por_ano"] * 0.3
-        - df["dias_para_proxima_grande_promo"] * 0.01
-        + df["desconto_max_janela"] * 0.02
-        - df["dias_desde_ultimo_desconto"] * 0.001
-        + np.random.normal(0, 0.5, n_samples)
+    var_serScore = (
+        var_dfDados["frequencia_descontos_por_ano"] * 0.3
+        - var_dfDados["dias_para_proxima_grande_promo"] * 0.01
+        + var_dfDados["desconto_max_janela"] * 0.02
+        - var_dfDados["dias_desde_ultimo_desconto"] * 0.001
+        + np.random.normal(0, 0.5, arg_intNumSamples)
     )
-    df["alvo_classificacao"] = pd.cut(score, bins=3, labels=[0, 1, 2]).astype(int)
+    var_dfDados["alvo_classificacao"] = pd.cut(var_serScore, bins=3, labels=[0, 1, 2]).astype(int)
 
     # Alvo regressão: dias até próximo desconto
-    df["alvo_regressao"] = np.clip(
-        df["dias_desde_ultimo_desconto"] * 0.3
-        + df["dias_para_proxima_grande_promo"] * 0.5
-        - df["frequencia_descontos_por_ano"] * 5
-        + np.random.normal(0, 20, n_samples),
+    var_dfDados["alvo_regressao"] = np.clip(
+        var_dfDados["dias_desde_ultimo_desconto"] * 0.3
+        + var_dfDados["dias_para_proxima_grande_promo"] * 0.5
+        - var_dfDados["frequencia_descontos_por_ano"] * 5
+        + np.random.normal(0, 20, arg_intNumSamples),
         0, 365
     ).astype(int)
 
-    return df
+    return var_dfDados
 
 
 def main():
     """Gera e salva os modelos dummy."""
-    output_dir = Path(__file__).resolve().parents[1] / "resources" / "models"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    var_pathOutputDir = Path(__file__).resolve().parents[1] / "resources" / "models"
+    var_pathOutputDir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
     print("🏭 Gerando Modelos Dummy para Previsor Steam")
     print("=" * 60)
 
     # Gera dados
-    df = generate_synthetic_data(5000)
-    X = df[FEATURE_COLUMNS]
-    y_clf = df["alvo_classificacao"]
-    y_reg = df["alvo_regressao"]
+    var_dfDados = gerar_dados_sinteticos(5000)
+    var_dfX = var_dfDados[CON_LIST_FEATURE_COLUMNS]
+    var_serYClassificacao = var_dfDados["alvo_classificacao"]
+    var_serYRegressao = var_dfDados["alvo_regressao"]
 
-    print(f"✅ Dados gerados: {len(df)} amostras, {len(FEATURE_COLUMNS)} features")
+    print(f"✅ Dados gerados: {len(var_dfDados)} amostras, {len(CON_LIST_FEATURE_COLUMNS)} features")
 
     # ── Classificação XGBoost ──
     print("\n📊 Treinando modelo de classificação (XGBoost)...")
-    clf = xgb.XGBClassifier(
+    var_objClassificador = xgb.XGBClassifier(
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
@@ -115,35 +123,35 @@ def main():
         use_label_encoder=False,
         eval_metric="mlogloss",
     )
-    clf.fit(X, y_clf)
-    clf_path = output_dir / "modelo_classificacao_XGBoost_latest.joblib"
-    joblib.dump(clf, clf_path)
-    print(f"   ✅ Salvo: {clf_path}")
+    var_objClassificador.fit(var_dfX, var_serYClassificacao)
+    var_pathClassificacao = var_pathOutputDir / "modelo_classificacao_XGBoost_latest.joblib"
+    joblib.dump(var_objClassificador, var_pathClassificacao)
+    print(f"   ✅ Salvo: {var_pathClassificacao}")
 
     # ── Regressão XGBoost ──
     print("\n📈 Treinando modelo de regressão (XGBoost)...")
-    reg = xgb.XGBRegressor(
+    var_objRegressor = xgb.XGBRegressor(
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
         random_state=42,
     )
-    reg.fit(X, y_reg)
-    reg_path = output_dir / "modelo_regressao_XGBoost_latest.joblib"
-    joblib.dump(reg, reg_path)
-    print(f"   ✅ Salvo: {reg_path}")
+    var_objRegressor.fit(var_dfX, var_serYRegressao)
+    var_pathRegressao = var_pathOutputDir / "modelo_regressao_XGBoost_latest.joblib"
+    joblib.dump(var_objRegressor, var_pathRegressao)
+    print(f"   ✅ Salvo: {var_pathRegressao}")
 
     # ── Pipeline de escalonamento ──
     print("\n⚙️ Gerando pipeline de escalonamento...")
-    scaler = StandardScaler()
-    scaler.fit(X)
-    pipe_path = output_dir / "pipeline_escalonamento.joblib"
-    joblib.dump(scaler, pipe_path)
-    print(f"   ✅ Salvo: {pipe_path}")
+    var_objScaler = StandardScaler()
+    var_objScaler.fit(var_dfX)
+    var_pathPipeline = var_pathOutputDir / "pipeline_escalonamento.joblib"
+    joblib.dump(var_objScaler, var_pathPipeline)
+    print(f"   ✅ Salvo: {var_pathPipeline}")
 
     print("\n" + "=" * 60)
     print("✅ Todos os modelos dummy foram gerados com sucesso!")
-    print(f"   Diretório: {output_dir}")
+    print(f"   Diretório: {var_pathOutputDir}")
     print("=" * 60)
 
 

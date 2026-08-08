@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import sys
 
-from api.config import settings
+from api.config import api_settings
 from api.models_loader import ModelManager
 from api.routes import health, predict
 
@@ -32,9 +32,9 @@ async def lifespan(app: FastAPI):
     logger.info("═" * 60)
 
     # Carrega modelos
-    model_manager = ModelManager(settings.MODELS_PATH)
-    model_manager.load_models()
-    app.state.model_manager = model_manager
+    var_objModelManager = ModelManager(api_settings.MODELS_PATH)
+    var_objModelManager.load_models()
+    app.state.model_manager = var_objModelManager
 
     logger.info("API pronta para receber requisições.")
     yield
@@ -56,7 +56,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ── CORS (permitir extensão Chrome, Streamlit, e desenvolvimento local) ──
+# ── CORS ──
+# ATENÇÃO: allow_origins=["*"] é aceitável APENAS em desenvolvimento local.
+# Em produção, restringir para os domínios específicos da extensão e dashboard.
+# Recomenda-se usar variável de ambiente CORS_ORIGINS para configurar.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,7 +88,7 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "api.main:app",
-        host=settings.API_HOST,
-        port=settings.API_PORT,
+        host=api_settings.API_HOST,
+        port=api_settings.API_PORT,
         reload=True,
     )

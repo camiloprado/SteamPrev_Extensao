@@ -4,162 +4,170 @@ import discord
 from datetime import datetime
 
 
-def embed_previsao(data: dict) -> discord.Embed:
+def embed_previsao(arg_dictData: dict) -> discord.Embed:
     """
     Cria um Embed formatado com a previsão de um jogo.
 
     Parâmetros:
-    - data (dict): Resposta da API /predict/game.
+    - arg_dictData (dict): Resposta da API /predict/game.
 
     Retorna:
     - discord.Embed: Embed formatado.
     """
-    game = data.get("game", {})
-    clf = data.get("classificacao")
-    reg = data.get("regressao")
+    var_dictGame = arg_dictData.get("game", {})
+    var_dictClassificacao = arg_dictData.get("classificacao")
+    var_dictRegressao = arg_dictData.get("regressao")
 
     # Cor baseada na classificação
-    color_map = {
+    var_dictColorMap = {
         "cai": discord.Color.green(),      # Bom para o consumidor
         "mantem": discord.Color.gold(),
         "sobe": discord.Color.red(),        # Preço vai subir
     }
-    color = color_map.get(clf["classe"], discord.Color.blurple()) if clf else discord.Color.blurple()
+    var_objColor = var_dictColorMap.get(var_dictClassificacao["classe"], discord.Color.blurple()) if var_dictClassificacao else discord.Color.blurple()
 
-    embed = discord.Embed(
-        title=f"🎮 {game.get('name', 'Jogo')}",
-        description=f"**AppID:** `{game.get('appid', 'N/A')}`",
-        color=color,
+    var_objEmbed = discord.Embed(
+        title=f"🎮 {var_dictGame.get('name', 'Jogo')}",
+        description=f"**AppID:** `{var_dictGame.get('appid', 'N/A')}`",
+        color=var_objColor,
         timestamp=datetime.now(),
     )
 
     # Thumbnail (imagem do jogo)
-    header = game.get("header_image")
-    if header:
-        embed.set_thumbnail(url=header)
+    var_strHeader = var_dictGame.get("header_image")
+    if var_strHeader:
+        var_objEmbed.set_thumbnail(url=var_strHeader)
 
     # Info do jogo
-    price = game.get("price", 0)
-    review = game.get("review_score", 0)
-    embed.add_field(
+    var_floatPrice = var_dictGame.get("price", 0)
+    var_intReview = var_dictGame.get("review_score", 0)
+    var_objEmbed.add_field(
         name="💰 Preço Atual",
-        value=f"R$ {price:.2f}" if price > 0 else "Gratuito",
+        value=f"R$ {var_floatPrice:.2f}" if var_floatPrice > 0 else "Gratuito",
         inline=True,
     )
-    embed.add_field(
+    var_objEmbed.add_field(
         name="⭐ Review Score",
-        value=f"{review}%" if review else "N/A",
+        value=f"{var_intReview}%" if var_intReview else "N/A",
         inline=True,
     )
 
     # Classificação
-    if clf:
+    if var_dictClassificacao:
         # Barra de probabilidades
-        probas_text = ""
-        for label, prob in clf["probabilidades"].items():
-            bar_len = int(prob * 10)
-            bar = "█" * bar_len + "░" * (10 - bar_len)
-            probas_text += f"`{label:>6}: {bar} {prob:.1%}`\n"
+        var_strProbasText = ""
+        for var_strLabel, var_floatProb in var_dictClassificacao["probabilidades"].items():
+            var_intBarLen = int(var_floatProb * 10)
+            var_strBar = "█" * var_intBarLen + "░" * (10 - var_intBarLen)
+            var_strProbasText += f"`{var_strLabel:>6}: {var_strBar} {var_floatProb:.1%}`\n"
 
-        embed.add_field(
-            name=f"📊 Direção do Preço: {clf['classe_emoji']}",
-            value=f"Confiança: **{clf['confianca']:.1%}**\n{probas_text}",
+        var_objEmbed.add_field(
+            name=f"📊 Direção do Preço: {var_dictClassificacao['classe_emoji']}",
+            value=f"Confiança: **{var_dictClassificacao['confianca']:.1%}**\n{var_strProbasText}",
             inline=False,
         )
 
     # Regressão
-    if reg:
-        embed.add_field(
+    if var_dictRegressao:
+        var_objEmbed.add_field(
             name="⏳ Próxima Promoção",
-            value=f"**{reg['dias_estimados']} dias**\n{reg['descricao']}",
+            value=f"**{var_dictRegressao['dias_estimados']} dias**\n{var_dictRegressao['descricao']}",
             inline=False,
         )
 
-    embed.set_footer(text="Previsor Steam • Dados de ML")
+    var_objEmbed.set_footer(text="Previsor Steam • Dados de ML")
 
-    return embed
+    return var_objEmbed
 
 
-def embed_status(health_data: dict) -> discord.Embed:
+def embed_status(arg_dictHealthData: dict) -> discord.Embed:
     """
     Cria Embed com o status da API.
 
     Parâmetros:
-    - health_data (dict): Resposta do /health.
+    - arg_dictHealthData (dict): Resposta do /health.
 
     Retorna:
     - discord.Embed: Embed formatado.
     """
-    status = health_data.get("status", "desconhecido")
-    models = health_data.get("models", {})
+    var_strStatus = arg_dictHealthData.get("status", "desconhecido")
+    var_dictModels = arg_dictHealthData.get("models", {})
 
-    color = discord.Color.green() if status == "healthy" else discord.Color.red()
+    var_objColor = discord.Color.green() if var_strStatus == "healthy" else discord.Color.red()
 
-    embed = discord.Embed(
+    var_objEmbed = discord.Embed(
         title="📡 Status da API — Previsor Steam",
-        color=color,
+        color=var_objColor,
         timestamp=datetime.now(),
     )
 
-    embed.add_field(
+    var_objEmbed.add_field(
         name="Status",
-        value=f"{'🟢' if status == 'healthy' else '🔴'} {status.upper()}",
+        value=f"{'🟢' if var_strStatus == 'healthy' else '🔴'} {var_strStatus.upper()}",
         inline=True,
     )
-    embed.add_field(
+    var_objEmbed.add_field(
         name="Versão",
-        value=health_data.get("version", "N/A"),
+        value=arg_dictHealthData.get("version", "N/A"),
         inline=True,
     )
-    embed.add_field(
+    var_objEmbed.add_field(
         name="Modelos",
         value=(
-            f"Classificação: {'✅' if models.get('classificacao') else '❌'}\n"
-            f"Regressão: {'✅' if models.get('regressao') else '❌'}\n"
-            f"Pipeline: {'✅' if models.get('pipeline_escalonamento') else '❌'}"
+            f"Classificação: {'✅' if var_dictModels.get('classificacao') else '❌'}\n"
+            f"Regressão: {'✅' if var_dictModels.get('regressao') else '❌'}\n"
+            f"Pipeline: {'✅' if var_dictModels.get('pipeline_escalonamento') else '❌'}"
         ),
         inline=False,
     )
 
-    return embed
+    return var_objEmbed
 
 
-def embed_busca(results: list[dict], query: str) -> discord.Embed:
+def embed_busca(arg_listResults: list[dict], arg_strQuery: str) -> discord.Embed:
     """
     Cria Embed com resultados de busca.
 
     Parâmetros:
-    - results (list): Lista de jogos encontrados.
-    - query (str): Query original.
+    - arg_listResults (list): Lista de jogos encontrados.
+    - arg_strQuery (str): Query original.
 
     Retorna:
     - discord.Embed: Embed formatado.
     """
-    embed = discord.Embed(
-        title=f"🔍 Resultados para: \"{query}\"",
+    var_objEmbed = discord.Embed(
+        title=f"🔍 Resultados para: \"{arg_strQuery}\"",
         color=discord.Color.blurple(),
         timestamp=datetime.now(),
     )
 
-    if not results:
-        embed.description = "Nenhum jogo encontrado."
-        return embed
+    if not arg_listResults:
+        var_objEmbed.description = "Nenhum jogo encontrado."
+        return var_objEmbed
 
-    lines = []
-    for i, game in enumerate(results[:10], 1):
-        lines.append(f"**{i}.** {game.get('name', '?')} (`{game.get('appid', '?')}`)")
+    var_listLines = []
+    for var_intIdx, var_dictGame in enumerate(arg_listResults[:10], 1):
+        var_listLines.append(f"**{var_intIdx}.** {var_dictGame.get('name', '?')} (`{var_dictGame.get('appid', '?')}`)")
 
-    embed.description = "\n".join(lines)
-    embed.set_footer(text=f"{len(results)} resultado(s) • Use /prever <nome> para previsão")
+    var_objEmbed.description = "\n".join(var_listLines)
+    var_objEmbed.set_footer(text=f"{len(arg_listResults)} resultado(s) • Use /prever <nome> para previsão")
 
-    return embed
+    return var_objEmbed
 
 
-def embed_erro(message: str) -> discord.Embed:
-    """Cria Embed de erro."""
+def embed_erro(arg_strMessage: str) -> discord.Embed:
+    """
+    Cria Embed de erro.
+
+    Parâmetros:
+    - arg_strMessage (str): Mensagem de erro.
+
+    Retorna:
+    - discord.Embed: Embed de erro formatado.
+    """
     return discord.Embed(
         title="❌ Erro",
-        description=message,
+        description=arg_strMessage,
         color=discord.Color.red(),
         timestamp=datetime.now(),
     )
