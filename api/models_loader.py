@@ -27,9 +27,19 @@ class ModelManager:
     def load_models(self) -> None:
         """
         Carrega inicialmente os modelos base.
+        Faz download automático de modelos ausentes via GitHub Releases.
         """
         import gc
         logger.info(f"Carregando pipeline de: {self._var_pathModels}")
+
+        # Download automático de modelos ausentes
+        try:
+            from scripts.download_models import ensure_models
+            ensure_models(models_dir=self._var_pathModels)
+        except ImportError:
+            logger.debug("Módulo download_models não disponível. Usando modelos locais.")
+        except Exception as e:
+            logger.warning(f"Download automático de modelos falhou: {e}")
 
         # Pipeline de escalonamento (único para todos os modelos)
         var_pathPipeline = self._var_pathModels / "pipeline_escalonamento.joblib"
@@ -46,23 +56,47 @@ class ModelManager:
         Garante que o modelo correspondente ao horizonte está na memória.
         Libera o antigo usando gc.collect() para evitar sobrecarga.
         Suporta hot-reload se o timestamp do arquivo mudar.
+
+        Suporta nomenclatura padronizada (pós-exportação) e fallback
+        para nomenclatura antiga com nome do algoritmo.
         """
         var_boolReloaded = False
         import gc
 
-        var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
-        var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
+        # Normaliza: remove sufixo _latest se presente (ex: "30d_latest" → "30d")
+        var_strHorizonte = horizonte.replace("_latest", "") if horizonte != "latest" else horizonte
+
+        # ── Resolve caminhos com fallback ──
+        # Classificação: tenta nomenclatura padronizada primeiro
+        if var_strHorizonte == "latest":
+            var_pathClassificacao = self._var_pathModels / "modelo_latest.joblib"
+        else:
+            var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_{var_strHorizonte}.joblib"
+
+        # Fallback: nomenclatura antiga com algoritmo
+        if not var_pathClassificacao.exists():
+            var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
+
+        # Regressão: tenta nomenclatura padronizada primeiro
+        if var_strHorizonte == "latest":
+            var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
+        else:
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+
+        # Fallback: nomenclatura antiga com algoritmo
+        if not var_pathRegressao.exists():
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
         
         # Fallback para regressão latest se não houver um específico pro horizonte
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / "modelo_regressao_XGBoost_latest.joblib"
 
-        var_boolHorizonChanged = self._var_strCurrentHorizon != horizonte
+        var_boolHorizonChanged = self._var_strCurrentHorizon != var_strHorizonte
 
         # Checa atualização do arquivo de Classificação ou mudança de horizonte
         if var_pathClassificacao.exists():
             if var_boolHorizonChanged or var_pathClassificacao.stat().st_mtime > self._var_floatClassificacaoMtime:
-                logger.info(f"🔄 Trocando/Recarregando modelo de classificação para horizonte: {horizonte}")
+                logger.info(f"🔄 Trocando/Recarregando modelo de classificação para horizonte: {var_strHorizonte}")
                 self._var_objClassificacaoModel = None
                 gc.collect() # Libera RAM do modelo antigo
                 self._var_objClassificacaoModel = joblib.load(var_pathClassificacao)
@@ -72,14 +106,14 @@ class ModelManager:
         # Checa atualização do arquivo de Regressão
         if var_pathRegressao.exists():
             if var_boolHorizonChanged or var_pathRegressao.stat().st_mtime > self._var_floatRegressaoMtime:
-                logger.info(f"🔄 Trocando/Recarregando modelo de regressão para horizonte: {horizonte}")
+                logger.info(f"🔄 Trocando/Recarregando modelo de regressão para horizonte: {var_strHorizonte}")
                 self._var_objRegressaoModel = None
                 gc.collect()
                 self._var_objRegressaoModel = joblib.load(var_pathRegressao)
                 self._var_floatRegressaoMtime = var_pathRegressao.stat().st_mtime
                 var_boolReloaded = True
 
-        self._var_strCurrentHorizon = horizonte
+        self._var_strCurrentHorizon = var_strHorizonte
         return var_boolReloaded
 
     @property

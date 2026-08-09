@@ -14,8 +14,8 @@ class GameQueryInput(BaseModel):
         examples=["730", "1245620"],
     )
     horizonte: str = Field(
-        default="latest",
-        description="Horizonte da previsão: 'latest', '30d_latest', '60d_latest', '90d_latest'",
+        default="30d",
+        description="Horizonte da previsão: '30d', '60d', '90d' ou 'latest' (melhor geral)",
     )
 
 

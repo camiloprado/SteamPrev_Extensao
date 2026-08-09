@@ -16,6 +16,7 @@ class APISettings(BaseSettings):
 
     # Modelos
     MODELS_PATH: str = str(Path(__file__).resolve().parents[1] / "resources" / "models")
+    MODELS_BASE_URL: str = "https://github.com/camiloprado/SteamPrev_Machine_Learning/releases/latest/download"
 
     # APIs externas (opcionais)
     STEAM_API_KEY: str = ""
