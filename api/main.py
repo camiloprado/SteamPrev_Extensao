@@ -57,12 +57,22 @@ app = FastAPI(
 )
 
 # ── CORS ──
-# ATENÇÃO: allow_origins=["*"] é aceitável APENAS em desenvolvimento local.
-# Em produção, restringir para os domínios específicos da extensão e dashboard.
-# Recomenda-se usar variável de ambiente CORS_ORIGINS para configurar.
+# Em produção, a variável de ambiente CORS_ORIGINS pode ser definida.
+# Por padrão, restringimos o acesso para localhost e para extensões de navegadores.
+import os
+var_strCorsOrigins = os.getenv("CORS_ORIGINS", "")
+if var_strCorsOrigins:
+    var_listOrigins = [var_strOrigin.strip() for var_strOrigin in var_strCorsOrigins.split(",")]
+    var_strOriginRegex = None
+else:
+    var_listOrigins = []
+    # Expressão regular para aceitar conexões locais e extensões (Chrome, Edge, Brave, Opera, Firefox)
+    var_strOriginRegex = r"https?://localhost:\d+|https?://127\.0\.0\.1:\d+|chrome-extension://.*|moz-extension://.*"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=var_listOrigins,
+    allow_origin_regex=var_strOriginRegex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -16,13 +16,17 @@ class ModelManager:
 
     def __init__(self, arg_strModelsPath: str):
         self._var_pathModels = Path(arg_strModelsPath)
-        self._var_objClassificacaoModel = None
-        self._var_objRegressaoModel = None
+        self._var_dictClassificacaoModels = {}
+        self._var_dictRegressaoModels = {}
+        self._var_dictRegressaoDescontoModels = {}
         self._var_objPipelineEscalonamento = None
-        self._var_floatClassificacaoMtime: float = 0.0
-        self._var_floatRegressaoMtime: float = 0.0
+        
+        self._var_dictClassificacaoMtime = {}
+        self._var_dictRegressaoMtime = {}
+        self._var_dictRegressaoDescontoMtime = {}
+        
         self._var_boolLoaded = False
-        self._var_strCurrentHorizon = None
+        self._var_strCurrentHorizon = "latest"
 
     def load_models(self) -> None:
         """
@@ -48,8 +52,9 @@ class ModelManager:
             logger.info(f"✅ Pipeline escalonamento carregado: {var_pathPipeline.name}")
 
         self._var_boolLoaded = True
-        # Defer model loading to endpoint execution
-        self.ensure_models_for_horizon("latest")
+        # Pré-carrega todos os horizontes para evitar lentidão na troca
+        for var_strHoriz in ["30d", "60d", "90d", "latest"]:
+            self.ensure_models_for_horizon(var_strHoriz)
 
     def ensure_models_for_horizon(self, horizonte: str) -> bool:
         """
@@ -65,6 +70,7 @@ class ModelManager:
 
         # Normaliza: remove sufixo _latest se presente (ex: "30d_latest" → "30d")
         var_strHorizonte = horizonte.replace("_latest", "") if horizonte != "latest" else horizonte
+        self._var_strCurrentHorizon = var_strHorizonte
 
         # ── Resolve caminhos com fallback ──
         # Classificação: tenta nomenclatura padronizada primeiro
@@ -77,43 +83,54 @@ class ModelManager:
         if not var_pathClassificacao.exists():
             var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
 
-        # Regressão: tenta nomenclatura padronizada primeiro
+        # Regressão Dias: tenta nomenclatura padronizada primeiro
         if var_strHorizonte == "latest":
-            var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
+            var_pathRegressao = self._var_pathModels / "modelo_regressao_dias_30d.joblib"
         else:
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
 
-        # Fallback: nomenclatura antiga com algoritmo
+        # Fallback: nomenclatura antiga
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
-        
-        # Fallback para regressão latest se não houver um específico pro horizonte
         if not var_pathRegressao.exists():
-            var_pathRegressao = self._var_pathModels / "modelo_regressao_XGBoost_latest.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+            
+        # Regressão Desconto:
+        if var_strHorizonte == "latest":
+            var_pathRegressaoDesconto = self._var_pathModels / "modelo_regressao_desconto_30d.joblib"
+        else:
+            var_pathRegressaoDesconto = self._var_pathModels / f"modelo_regressao_desconto_{var_strHorizonte}.joblib"
 
-        var_boolHorizonChanged = self._var_strCurrentHorizon != var_strHorizonte
-
-        # Checa atualização do arquivo de Classificação ou mudança de horizonte
+        # Checa atualização do arquivo de Classificação
         if var_pathClassificacao.exists():
-            if var_boolHorizonChanged or var_pathClassificacao.stat().st_mtime > self._var_floatClassificacaoMtime:
-                logger.info(f"🔄 Trocando/Recarregando modelo de classificação para horizonte: {var_strHorizonte}")
-                self._var_objClassificacaoModel = None
-                gc.collect() # Libera RAM do modelo antigo
-                self._var_objClassificacaoModel = joblib.load(var_pathClassificacao)
-                self._var_floatClassificacaoMtime = var_pathClassificacao.stat().st_mtime
+            var_floatMtime = var_pathClassificacao.stat().st_mtime
+            if var_strHorizonte not in self._var_dictClassificacaoModels or var_floatMtime > self._var_dictClassificacaoMtime.get(var_strHorizonte, 0):
+                logger.info(f"🔄 Carregando modelo de classificação para horizonte: {var_strHorizonte}")
+                self._var_dictClassificacaoModels[var_strHorizonte] = joblib.load(var_pathClassificacao)
+                self._var_dictClassificacaoMtime[var_strHorizonte] = var_floatMtime
                 var_boolReloaded = True
 
-        # Checa atualização do arquivo de Regressão
+        # Checa atualização do arquivo de Regressão Dias
         if var_pathRegressao.exists():
-            if var_boolHorizonChanged or var_pathRegressao.stat().st_mtime > self._var_floatRegressaoMtime:
-                logger.info(f"🔄 Trocando/Recarregando modelo de regressão para horizonte: {var_strHorizonte}")
-                self._var_objRegressaoModel = None
-                gc.collect()
-                self._var_objRegressaoModel = joblib.load(var_pathRegressao)
-                self._var_floatRegressaoMtime = var_pathRegressao.stat().st_mtime
+            var_floatMtime = var_pathRegressao.stat().st_mtime
+            if var_strHorizonte not in self._var_dictRegressaoModels or var_floatMtime > self._var_dictRegressaoMtime.get(var_strHorizonte, 0):
+                logger.info(f"🔄 Carregando modelo de regressão (dias) para horizonte: {var_strHorizonte}")
+                self._var_dictRegressaoModels[var_strHorizonte] = joblib.load(var_pathRegressao)
+                self._var_dictRegressaoMtime[var_strHorizonte] = var_floatMtime
                 var_boolReloaded = True
 
-        self._var_strCurrentHorizon = var_strHorizonte
+        # Checa atualização do arquivo de Regressão Desconto
+        if var_pathRegressaoDesconto.exists():
+            var_floatMtime = var_pathRegressaoDesconto.stat().st_mtime
+            if var_strHorizonte not in self._var_dictRegressaoDescontoModels or var_floatMtime > self._var_dictRegressaoDescontoMtime.get(var_strHorizonte, 0):
+                logger.info(f"🔄 Carregando modelo de regressão (desconto) para horizonte: {var_strHorizonte}")
+                self._var_dictRegressaoDescontoModels[var_strHorizonte] = joblib.load(var_pathRegressaoDesconto)
+                self._var_dictRegressaoDescontoMtime[var_strHorizonte] = var_floatMtime
+                var_boolReloaded = True
+
+        if var_boolReloaded:
+            gc.collect()
+
         return var_boolReloaded
 
     @property
@@ -123,23 +140,33 @@ class ModelManager:
 
     @property
     def classificacao_available(self) -> bool:
-        """Verifica se o modelo de classificação está disponível."""
-        return self._var_objClassificacaoModel is not None
+        """Verifica se o modelo de classificação está disponível no horizonte atual."""
+        return self._var_strCurrentHorizon in self._var_dictClassificacaoModels
 
     @property
     def regressao_available(self) -> bool:
-        """Verifica se o modelo de regressão está disponível."""
-        return self._var_objRegressaoModel is not None
+        """Verifica se o modelo de regressão (dias) está disponível no horizonte atual."""
+        return self._var_strCurrentHorizon in self._var_dictRegressaoModels
+
+    @property
+    def regressao_desconto_available(self) -> bool:
+        """Verifica se o modelo de regressão (desconto) está disponível no horizonte atual."""
+        return self._var_strCurrentHorizon in self._var_dictRegressaoDescontoModels
 
     @property
     def classificacao_model(self):
-        """Retorna o modelo de classificação carregado."""
-        return self._var_objClassificacaoModel
+        """Retorna o modelo de classificação carregado para o horizonte atual."""
+        return self._var_dictClassificacaoModels.get(self._var_strCurrentHorizon)
 
     @property
     def regressao_model(self):
-        """Retorna o modelo de regressão carregado."""
-        return self._var_objRegressaoModel
+        """Retorna o modelo de regressão (dias) carregado para o horizonte atual."""
+        return self._var_dictRegressaoModels.get(self._var_strCurrentHorizon)
+
+    @property
+    def regressao_desconto_model(self):
+        """Retorna o modelo de regressão (desconto) carregado para o horizonte atual."""
+        return self._var_dictRegressaoDescontoModels.get(self._var_strCurrentHorizon)
 
     @property
     def pipeline_escalonamento(self):
@@ -156,7 +183,8 @@ class ModelManager:
         return {
             "loaded": self._var_boolLoaded,
             "classificacao": self.classificacao_available,
-            "regressao": self.regressao_available,
+            "regressao_dias": self.regressao_available,
+            "regressao_desconto": self.regressao_desconto_available,
             "pipeline_escalonamento": self._var_objPipelineEscalonamento is not None,
             "models_path": str(self._var_pathModels),
         }

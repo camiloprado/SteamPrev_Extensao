@@ -259,6 +259,20 @@ function showResults(arg_dictData) {
     elRegCard.style.display = "block";
     document.getElementById("regValue").textContent = `${var_dictRegressao.dias_estimados} dias`;
     document.getElementById("regDesc").textContent = var_dictRegressao.descricao;
+
+    const elRegDetails = document.getElementById("regDetails");
+    // Mostra o card de detalhes se houver predição de desconto
+    if (var_dictRegressao.desconto_previsto_pct > 0) {
+      elRegDetails.style.display = "block";
+      document.getElementById("regDiscount").textContent = `${var_dictRegressao.desconto_previsto_pct}% OFF`;
+      
+      const var_floatPrecoEst = var_dictRegressao.preco_estimado;
+      document.getElementById("regPrice").textContent = var_floatPrecoEst > 0 
+        ? `R$ ${var_floatPrecoEst.toFixed(2)}` 
+        : "Gratuito";
+    } else {
+      elRegDetails.style.display = "none";
+    }
   } else {
     elRegCard.style.display = "none";
   }

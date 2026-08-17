@@ -86,8 +86,24 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
             else:
                 var_strDescricao = f"⏰ Promoção distante: ~{var_intDias} dias ({var_intDias // 30} meses)"
 
+            # Regressão de Desconto
+            var_intDesconto = 0
+            var_floatPrecoEstimado = 0.0
+
+            if arg_objModelManager.regressao_desconto_available:
+                try:
+                    var_floatDesconto = arg_objModelManager.regressao_desconto_model.predict(arg_dfFeatures)[0]
+                    var_intDesconto = max(0, min(100, int(round(float(var_floatDesconto)))))
+                    
+                    var_floatPrecoAtual = float(arg_dfFeatures["preco_catalogo"].iloc[0]) if "preco_catalogo" in arg_dfFeatures else 0.0
+                    var_floatPrecoEstimado = round(var_floatPrecoAtual * (1.0 - (var_intDesconto / 100.0)), 2)
+                except Exception as e:
+                    logger.error(f"Erro na regressão de desconto: {e}")
+
             var_objRegressaoResult = RegressionResult(
                 dias_estimados=var_intDias,
+                desconto_previsto_pct=var_intDesconto,
+                preco_estimado=var_floatPrecoEstimado,
                 descricao=var_strDescricao,
             )
         except Exception as e:
@@ -97,7 +113,7 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
 
 
 @router.post("/predict/game", response_model=PredictionResponse)
-async def predict_by_game(input_data: GameQueryInput, request: Request):
+async def predict_by_game(input_data: GameQueryInput, request: Request, debug: bool = False):
     """
     Faz predição completa (classificação + regressão) a partir do nome ou AppID do jogo.
 
@@ -147,7 +163,7 @@ async def predict_by_game(input_data: GameQueryInput, request: Request):
             game=var_objGameInfo,
             classificacao=None,
             regressao=None,
-            features_utilizadas={}
+            features_utilizadas={} if debug else None
         )
 
     # 3. Histórico de preços
@@ -178,35 +194,35 @@ async def predict_by_game(input_data: GameQueryInput, request: Request):
         game=var_objGameInfo,
         classificacao=var_objClassificacao,
         regressao=var_objRegressao,
-        features_utilizadas=var_dfFeatures.iloc[0].to_dict(),
+        features_utilizadas=var_dfFeatures.iloc[0].to_dict() if debug else None,
     )
 
 
 @router.post("/predict/classificacao", response_model=PredictionResponse)
-async def predict_classificacao(input_data: GameQueryInput, request: Request):
+async def predict_classificacao(input_data: GameQueryInput, request: Request, debug: bool = False):
     """
     Prevê a direção do preço ('cai', 'mantem', 'sobe') para um jogo.
     Aceita AppID ou nome do jogo.
     """
     # Reutiliza a lógica completa mas retorna só classificação
-    var_objResponse = await predict_by_game(input_data, request)
+    var_objResponse = await predict_by_game(input_data, request, debug)
     var_objResponse.regressao = None
     return var_objResponse
 
 
 @router.post("/predict/regressao", response_model=PredictionResponse)
-async def predict_regressao(input_data: GameQueryInput, request: Request):
+async def predict_regressao(input_data: GameQueryInput, request: Request, debug: bool = False):
     """
     Prevê quantos dias até a próxima promoção de um jogo.
     Aceita AppID ou nome do jogo.
     """
-    var_objResponse = await predict_by_game(input_data, request)
+    var_objResponse = await predict_by_game(input_data, request, debug)
     var_objResponse.classificacao = None
     return var_objResponse
 
 
 @router.post("/predict/features", response_model=PredictionResponse)
-async def predict_from_features(input_data: GameFeaturesInput, request: Request):
+async def predict_from_features(input_data: GameFeaturesInput, request: Request, debug: bool = False):
     """
     Faz predição a partir de features manuais (modo avançado).
     Útil para testes e integração com outros sistemas.
@@ -224,7 +240,7 @@ async def predict_from_features(input_data: GameFeaturesInput, request: Request)
         game=var_objGameInfo,
         classificacao=var_objClassificacao,
         regressao=var_objRegressao,
-        features_utilizadas=var_dictFeatures,
+        features_utilizadas=var_dictFeatures if debug else None,
     )
 
 

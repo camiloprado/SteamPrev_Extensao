@@ -12,12 +12,20 @@ Features reais (18 features, na ordem esperada pelo modelo):
     mes_atual, dia_do_ano, dias_para_proxima_grande_promo
 """
 
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import logging
 
 logger = logging.getLogger("core.features")
+
+# ── Configuração da janela histórica (espelha NormalizarModelos do projeto base) ──
+# ML_JANELA_ANOS (int)  → anos de histórico para cálculo de features (padrão: 5).
+# ML_JANELA_EXTENDIDA (bool) → quando True, dobra a janela para ciclos históricos mais longos.
+CON_INT_JANELA_ANOS: int = int(os.getenv("ML_JANELA_ANOS", "5"))
+CON_BOOL_JANELA_EXTENDIDA: bool = str(os.getenv("ML_JANELA_EXTENDIDA", "False")).lower() in ("true", "1", "yes")
+CON_INT_ANOS_EFETIVOS: int = CON_INT_JANELA_ANOS * 2 if CON_BOOL_JANELA_EXTENDIDA else CON_INT_JANELA_ANOS
 
 # Ordem exata das features usadas no treinamento
 CON_LIST_FEATURE_COLUMNS = [
@@ -121,8 +129,8 @@ def gerar_features_para_inferencia(
         }
         return pd.DataFrame([var_dictFeatures])[CON_LIST_FEATURE_COLUMNS]
 
-    # ── Janela de 5 anos (mesma do treinamento) ──
-    var_intJanelaSegundos = 5 * 365 * 86400
+    # ── Janela de anos configurada via env (espelha NormalizarModelos) ──
+    var_intJanelaSegundos = CON_INT_ANOS_EFETIVOS * 365 * 86400
     var_intTimestampLimite = var_intTimestampAgora - var_intJanelaSegundos
 
     var_listJanela = [
@@ -153,9 +161,13 @@ def gerar_features_para_inferencia(
             ))
             break
 
-    # Dias no preço atual (estabilidade)
+    # Dias no preço atual (estabilidade) — cap pela janela configurada (paridade com normalizar_modelos.py)
+    var_intTimestampLimiteNoPreco = var_intTimestampAgora - var_intJanelaSegundos
     var_intDiasNoPrecoAtual = 0
     for var_dictPonto in reversed(arg_listHistoricoPrecos):
+        # Para ao ultrapassar o limite da janela
+        if var_dictPonto.get("timestamp", 0) < var_intTimestampLimiteNoPreco:
+            break
         if var_dictPonto.get("preco", 0) > 0 and abs(var_dictPonto["preco"] - var_floatPrecoAtual) / max(var_floatPrecoAtual, 0.01) < 0.01:
             var_intDiasNoPrecoAtual = max(0, int(
                 (var_intTimestampAgora - var_dictPonto["timestamp"]) / 86400

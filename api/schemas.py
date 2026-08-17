@@ -66,6 +66,8 @@ class ClassificationResult(BaseModel):
 class RegressionResult(BaseModel):
     """Resultado da regressão (dias até promoção)."""
     dias_estimados: int = Field(description="Dias estimados até a próxima promoção")
+    desconto_previsto_pct: int = Field(default=0, description="Percentual de desconto estimado (0-100)")
+    preco_estimado: float = Field(default=0.0, description="Preço estimado na próxima promoção")
     descricao: str = Field(description="Descrição legível do resultado")
 
 
