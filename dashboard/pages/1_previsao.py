@@ -88,7 +88,7 @@ if predict_btn and query:
                 with col_img:
                     header = game.get("header_image")
                     if header:
-                        st.image(header, use_column_width=True)
+                        st.image(header, use_container_width=True)
 
                 with col_info:
                     st.markdown(f"## 🎮 {game.get('name', 'Jogo')}")
@@ -189,6 +189,14 @@ if predict_btn and query:
                             )
                             st.plotly_chart(fig_gauge, use_container_width=True)
                             st.info(descricao)
+                            
+                            # Exibir Desconto Previsto
+                            desconto = reg.get("desconto_previsto_pct", 0)
+                            preco_est = reg.get("preco_estimado", 0.0)
+                            if desconto > 0:
+                                st.success(f"🏷️ Desconto Previsto: **{desconto}%** (Estimativa: R$ {preco_est:.2f})")
+                            else:
+                                st.warning("📉 Modelo preditor de desconto ausente nos arquivos base.")
                         else:
                             st.warning("Modelo de regressão não disponível")
 

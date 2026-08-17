@@ -30,13 +30,10 @@ ITAD_API_KEY=sua_chave_itad_aqui
 
 ### 2. Importando os Modelos (`.joblib`)
 O sistema **não** inclui os arquivos pesados de Machine Learning no controle de versão.
-Você deve colar os arquivos compilados de sua responsabilidade estritamente no diretório:
-`resources/models/`
+No entanto, **não é necessário baixá-los manualmente**. A API possui um script integrado (`scripts/download_models.py`) que faz o download e a atualização automática da última versão dos modelos `.joblib` diretamente das [Tags de Release do GitHub](https://github.com/camiloprado/SteamPrev_Machine_Learning/releases/latest).
 
-Arquivos necessários (Exemplos):
-- `classificacao_tendencia_latest.joblib`
-- `classificacao_tendencia_30d_latest.joblib`
-- `regressao_dias_promo_60d_latest.joblib`
+Os modelos baixados serão armazenados automaticamente no diretório:
+`resources/models/`
 
 ### 3. Rodando os Serviços
 Iniciando a API Principal:

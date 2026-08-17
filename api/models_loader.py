@@ -85,15 +85,15 @@ class ModelManager:
 
         # Regressão Dias: tenta nomenclatura padronizada primeiro
         if var_strHorizonte == "latest":
-            var_pathRegressao = self._var_pathModels / "modelo_regressao_dias_30d.joblib"
+            var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
         else:
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
 
         # Fallback: nomenclatura antiga
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
         if not var_pathRegressao.exists():
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
             
         # Regressão Desconto:
         if var_strHorizonte == "latest":

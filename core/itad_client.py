@@ -27,6 +27,22 @@ class ITADClient:
     """
 
     @staticmethod
+    async def _get_with_retry(client: httpx.AsyncClient, url: str, params: dict, max_retries: int = 3) -> httpx.Response:
+        import asyncio
+        for attempt in range(max_retries):
+            response = await client.get(url, params=params)
+            if response.status_code == 429:
+                try:
+                    wait_time = int(response.headers.get("Retry-After", (2 ** attempt) * 2))
+                except ValueError:
+                    wait_time = (2 ** attempt) * 2
+                logger.warning(f"ITAD API limite (429). Retentando em {wait_time}s (tentativa {attempt+1}/{max_retries})...")
+                await asyncio.sleep(wait_time)
+                continue
+            return response
+        return await client.get(url, params=params)
+
+    @staticmethod
     async def get_price_history(arg_intAppid: int, arg_floatPrecoBase: float = 0.0, arg_intAnos: int = 5) -> list[dict]:
         """
         Busca o histórico de preços real de um jogo via ITAD API.
@@ -61,8 +77,10 @@ class ITADClient:
             
             # 1. Lookup ID via Steam AppID
             var_strLookupUrl = "https://api.isthereanydeal.com/games/lookup/v1"
-            async with httpx.AsyncClient(timeout=10.0) as var_objClient:
-                var_objResponseLookup = await var_objClient.get(
+            var_dictHeaders = {"User-Agent": "SteamPrev-Extensao/1.0"}
+            async with httpx.AsyncClient(timeout=10.0, headers=var_dictHeaders) as var_objClient:
+                var_objResponseLookup = await ITADClient._get_with_retry(
+                    var_objClient,
                     var_strLookupUrl,
                     params={"key": CON_STR_ITAD_API_KEY, "appid": arg_intAppid}
                 )
@@ -78,7 +96,8 @@ class ITADClient:
                 var_strItadId = var_dictLookup["game"]["id"]
                 
                 # 2. Buscar Histórico
-                var_objResponseHist = await var_objClient.get(
+                var_objResponseHist = await ITADClient._get_with_retry(
+                    var_objClient,
                     CON_STR_ITAD_HISTORY_URL,
                     params={"key": CON_STR_ITAD_API_KEY, "id": var_strItadId, "shops": 61, "country": "BR"} # 61 = Steam
                 )
@@ -94,11 +113,13 @@ class ITADClient:
                 var_listDeals = var_dictHistJson if isinstance(var_dictHistJson, list) else var_dictHistJson.get("history", [])
                 
                 for var_dictDeal in var_listDeals:
-                    var_floatPrecoDeal = var_dictDeal.get("price", {}).get("amount", 0.0)
+                    var_dictDealInfo = var_dictDeal.get("deal") or {}
+                    var_dictPrice = var_dictDealInfo.get("price") or {}
+                    var_floatPrecoDeal = var_dictPrice.get("amount", 0.0)
                     var_dtDeal = datetime.fromisoformat(var_dictDeal["timestamp"].replace("Z", "+00:00"))
                     
                     # Calcula desconto real se o preço base for conhecido, senão usa do payload
-                    var_intDesconto = 0
+                    var_intDesconto = var_dictDealInfo.get("cut", 0)
                     if arg_floatPrecoBase > 0 and var_floatPrecoDeal < arg_floatPrecoBase:
                         var_intDesconto = int(round((1 - (var_floatPrecoDeal / arg_floatPrecoBase)) * 100))
                     
