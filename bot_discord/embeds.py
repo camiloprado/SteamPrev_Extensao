@@ -69,9 +69,17 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
 
     # Regressão
     if var_dictRegressao:
+        var_strValorRegressao = f"**{var_dictRegressao['dias_estimados']} dias**\n{var_dictRegressao['descricao']}"
+        
+        var_intDesconto = var_dictRegressao.get("desconto_previsto_pct", 0)
+        if var_intDesconto > 0:
+            var_floatPreco = var_dictRegressao.get("preco_estimado", 0.0)
+            var_strPrecoFormatado = f"R$ {var_floatPreco:.2f}" if var_floatPreco > 0 else "Gratuito"
+            var_strValorRegressao += f"\n\n🏷️ **Desconto Previsto:** {var_intDesconto}%\n🎯 **Preço Estimado:** {var_strPrecoFormatado}"
+            
         var_objEmbed.add_field(
             name="⏳ Próxima Promoção",
-            value=f"**{var_dictRegressao['dias_estimados']} dias**\n{var_dictRegressao['descricao']}",
+            value=var_strValorRegressao,
             inline=False,
         )
 
