@@ -42,13 +42,16 @@ CON_PATH_DEFAULT_MODELS_DIR = Path(__file__).resolve().parents[1] / "resources" 
 
 # Lista de modelos esperados para download
 CON_LIST_EXPECTED_MODELS = [
+    "modelo_latest.joblib",
     "modelo_classificacao_30d.joblib",
     "modelo_classificacao_60d.joblib",
     "modelo_classificacao_90d.joblib",
-    "modelo_regressao_30d.joblib",
-    "modelo_regressao_60d.joblib",
-    "modelo_regressao_90d.joblib",
-    "modelo_latest.joblib",
+    "modelo_regressao_dias_30d.joblib",
+    "modelo_regressao_dias_60d.joblib",
+    "modelo_regressao_dias_90d.joblib",
+    "modelo_regressao_desconto_30d.joblib",
+    "modelo_regressao_desconto_60d.joblib",
+    "modelo_regressao_desconto_90d.joblib",
 ]
 
 
