@@ -91,7 +91,7 @@ with col_g1:
         showlegend=True,
         margin=dict(t=30, b=30),
     )
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width="stretch")
 
 with col_g2:
     st.subheader("📈 Confiança ao Longo do Tempo")
@@ -111,7 +111,7 @@ with col_g2:
         yaxis_title="Confiança",
         margin=dict(t=30, b=30),
     )
-    st.plotly_chart(fig_conf, use_container_width=True)
+    st.plotly_chart(fig_conf, width="stretch")
 
 # ── Evolução de Preço Simulada ──
 st.divider()
@@ -156,13 +156,13 @@ fig_price.update_layout(
     yaxis_title="Preço (R$)",
     margin=dict(t=30, b=30),
 )
-st.plotly_chart(fig_price, use_container_width=True)
+st.plotly_chart(fig_price, width="stretch")
 
 # ── Tabela de Previsões ──
 st.divider()
 st.subheader("📋 Registro de Previsões")
 st.dataframe(
     df_filtered.style.background_gradient(subset=["confianca"], cmap="YlOrRd"),
-    use_container_width=True,
+    width="stretch",
     height=400,
 )
