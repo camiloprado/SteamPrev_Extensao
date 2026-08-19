@@ -80,12 +80,33 @@ class SteamClient:
                         # Jogos pagos sem price_overview não estão à venda (ex: removidos da loja)
                         var_floatPrice = 0.0
 
-                # Parse reviews (appdetails tem metacritic)
+                # Parse reviews reais da Steam API
                 var_intReviewScore = 0
-                if "metacritic" in var_dictData:
-                    var_intReviewScore = var_dictData["metacritic"].get("score", 0)
-                else:
-                    var_intReviewScore = 50 # Default safe fallback
+                var_intTotalReviews = 1000
+                try:
+                    var_objRevResp = await var_objClient.get(
+                        f"https://store.steampowered.com/appreviews/{arg_intAppid}",
+                        params={"json": "1", "language": "all", "num_per_page": "0"}
+                    )
+                    if var_objRevResp.status_code == 200:
+                        var_dictRevData = var_objRevResp.json()
+                        var_dictSummary = var_dictRevData.get("query_summary", {})
+                        var_intTotalPos = var_dictSummary.get("total_positive", 0)
+                        var_intTotalRev = var_dictSummary.get("total_reviews", 0)
+                        if var_intTotalRev > 0:
+                            var_intReviewScore = int(round((var_intTotalPos / var_intTotalRev) * 100))
+                            var_intTotalReviews = var_intTotalRev
+                        else:
+                            var_intReviewScore = var_dictData.get("metacritic", {}).get("score", 50)
+                            var_intTotalReviews = 0
+                    else:
+                        var_intReviewScore = var_dictData.get("metacritic", {}).get("score", 50)
+                except Exception as rev_e:
+                    logger.warning(f"Steam API: Falha ao obter reviews reais para appid {arg_intAppid}: {rev_e}")
+                    var_intReviewScore = var_dictData.get("metacritic", {}).get("score", 50)
+
+                var_dictReleaseDate = var_dictData.get("release_date", {})
+                var_boolIsComingSoon = var_dictReleaseDate.get("coming_soon", False)
 
                 # Monta dict compatível com a inferência
                 var_dictResult = {
@@ -97,8 +118,9 @@ class SteamClient:
                     "is_on_sale": var_boolIsOnSale,
                     "sale_end_date": None, # Placeholder futuramente consumível via ITAD/web scraping
                     "review_score": var_intReviewScore,
-                    "total_reviews": 1000,
-                    "release_date": var_dictData.get("release_date", {}).get("date", "2020-01-01"),
+                    "total_reviews": var_intTotalReviews,
+                    "release_date": var_dictReleaseDate.get("date", "2020-01-01"),
+                    "is_coming_soon": var_boolIsComingSoon,
                     "header_image": var_dictData.get("header_image", ""),
                 }
                 _steam_cache[arg_intAppid] = (var_dictResult, var_floatNow)
