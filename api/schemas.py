@@ -53,6 +53,8 @@ class GameInfo(BaseModel):
     discount_percent: int = Field(default=0, description="Percentual de desconto atual")
     is_on_sale: bool = Field(default=False, description="True se o jogo estiver em promoção")
     sale_end_date: Optional[str] = Field(default=None, description="Data de término da promoção (se disponível)")
+    is_coming_soon: bool = Field(default=False, description="True se o jogo ainda não foi lançado")
+    release_date: Optional[str] = Field(default=None, description="Data de lançamento do jogo")
 
 
 class ClassificationResult(BaseModel):
@@ -67,6 +69,7 @@ class RegressionResult(BaseModel):
     """Resultado da regressão (dias até promoção)."""
     dias_estimados: int = Field(description="Dias estimados até a próxima promoção")
     desconto_previsto_pct: int = Field(default=0, description="Percentual de desconto estimado (0-100)")
+    desconto_margem_erro: float = Field(default=0.0, description="Margem de erro do desconto em % (MAE)")
     preco_estimado: float = Field(default=0.0, description="Preço estimado na próxima promoção")
     descricao: str = Field(description="Descrição legível do resultado")
 
@@ -77,6 +80,7 @@ class PredictionResponse(BaseModel):
     classificacao: Optional[ClassificationResult] = None
     regressao: Optional[RegressionResult] = None
     features_utilizadas: Optional[dict] = None
+    warnings: Optional[list[str]] = Field(default=None, description="Avisos sobre falhas parciais (ex: ITAD API).")
 
 
 class SearchResult(BaseModel):

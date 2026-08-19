@@ -40,12 +40,22 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
 
     # Info do jogo
     var_floatPrice = var_dictGame.get("price", 0)
+    var_boolIsComingSoon = var_dictGame.get("is_coming_soon", False)
+    var_strPrecoText = "Não Lançado" if var_boolIsComingSoon else (f"R$ {var_floatPrice:.2f}" if var_floatPrice > 0 else "Gratuito")
     var_intReview = var_dictGame.get("review_score", 0)
     var_objEmbed.add_field(
         name="💰 Preço Atual",
-        value=f"R$ {var_floatPrice:.2f}" if var_floatPrice > 0 else "Gratuito",
+        value=var_strPrecoText,
         inline=True,
     )
+
+    var_strReleaseDate = var_dictGame.get("release_date")
+    if var_strReleaseDate:
+        var_objEmbed.add_field(
+            name="📅 Lançamento",
+            value=var_strReleaseDate,
+            inline=True,
+        )
     var_objEmbed.add_field(
         name="⭐ Review Score",
         value=f"{var_intReview}%" if var_intReview else "N/A",
@@ -74,12 +84,22 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
         var_intDesconto = var_dictRegressao.get("desconto_previsto_pct", 0)
         if var_intDesconto > 0:
             var_floatPreco = var_dictRegressao.get("preco_estimado", 0.0)
+            var_floatMargem = var_dictRegressao.get("desconto_margem_erro", 0.0)
             var_strPrecoFormatado = f"R$ {var_floatPreco:.2f}" if var_floatPreco > 0 else "Gratuito"
-            var_strValorRegressao += f"\n\n🏷️ **Desconto Previsto:** {var_intDesconto}%\n🎯 **Preço Estimado:** {var_strPrecoFormatado}"
+            var_strValorRegressao += f"\n\n🏷️ **Desconto Previsto:** {var_intDesconto}% (± {var_floatMargem}%)\n🎯 **Preço Estimado:** {var_strPrecoFormatado}"
             
         var_objEmbed.add_field(
             name="⏳ Próxima Promoção",
             value=var_strValorRegressao,
+            inline=False,
+        )
+
+    var_listWarnings = arg_dictData.get("warnings", [])
+    if var_listWarnings:
+        var_strWarnings = "\n".join([f"⚠️ {w}" for w in var_listWarnings])
+        var_objEmbed.add_field(
+            name="Avisos",
+            value=var_strWarnings,
             inline=False,
         )
 

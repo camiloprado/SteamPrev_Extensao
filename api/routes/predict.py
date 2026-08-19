@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, HTTPException
 import pandas as pd
 import numpy as np
 import logging
+import time
 
 from api.schemas import (
     GameQueryInput,
@@ -89,11 +90,25 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
             # Regressão de Desconto
             var_intDesconto = 0
             var_floatPrecoEstimado = 0.0
+            var_floatDescontoMargemErro = 6.6
 
             if arg_objModelManager.regressao_desconto_available:
                 try:
                     var_floatDesconto = arg_objModelManager.regressao_desconto_model.predict(arg_dfFeatures)[0]
                     var_intDesconto = max(0, min(100, int(round(float(var_floatDesconto)))))
+                    
+                    import json
+                    try:
+                        manifest_path = arg_objModelManager._var_pathModels / "manifest.json"
+                        if manifest_path.exists():
+                            with open(manifest_path, "r", encoding="utf-8") as f:
+                                manifest_data = json.load(f)
+                                horizon = arg_objModelManager._var_strCurrentHorizon
+                                model_key = f"modelo_regressao_desconto_{horizon}.joblib"
+                                if model_key in manifest_data.get("models", {}):
+                                    var_floatDescontoMargemErro = manifest_data["models"][model_key]["metrics"].get("mae", 6.6)
+                    except Exception:
+                        pass
                     
                     var_floatPrecoAtual = float(arg_dfFeatures["preco_catalogo"].iloc[0]) if "preco_catalogo" in arg_dfFeatures else 0.0
                     var_floatPrecoEstimado = round(var_floatPrecoAtual * (1.0 - (var_intDesconto / 100.0)), 2)
@@ -103,6 +118,7 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
             var_objRegressaoResult = RegressionResult(
                 dias_estimados=var_intDias,
                 desconto_previsto_pct=var_intDesconto,
+                desconto_margem_erro=round(var_floatDescontoMargemErro, 1),
                 preco_estimado=var_floatPrecoEstimado,
                 descricao=var_strDescricao,
             )
@@ -128,9 +144,13 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
 
     var_strQuery = str(input_data.query).strip()
     if not var_strQuery.isdigit():
-        raise HTTPException(status_code=400, detail="A busca por nome foi descontinuada. Informe apenas o AppID (número) do jogo.")
-    
-    var_intAppid = int(var_strQuery)
+        from core.search import searcher
+        var_intAppidEncontrado = searcher.search_by_name(var_strQuery)
+        if not var_intAppidEncontrado:
+            raise HTTPException(status_code=404, detail=f"Jogo não encontrado pelo nome: '{var_strQuery}'")
+        var_intAppid = var_intAppidEncontrado
+    else:
+        var_intAppid = int(var_strQuery)
 
     # 2. Dados do jogo
     var_dictSteamData = await SteamClient.get_game_data(var_intAppid)
@@ -149,25 +169,38 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
         
     var_strGameName = var_dictSteamData.get("name", f"App {var_intAppid}")
     var_floatPrice = var_dictSteamData.get("price", 0.0)
-    
-    # Early return para jogos gratuitos
-    if var_dictSteamData.get("is_free", False):
+    var_boolIsFree = var_dictSteamData.get("is_free", False)
+    var_boolIsComingSoon = var_dictSteamData.get("is_coming_soon", False)
+
+    # Early return para jogos não lançados ou gratuitos
+    if var_boolIsComingSoon or var_boolIsFree:
         var_objGameInfo = GameInfo(
             appid=var_intAppid,
             name=var_strGameName,
-            price=0.0,
+            price=0.0 if var_boolIsComingSoon else var_floatPrice,
             review_score=var_dictSteamData.get("review_score"),
             header_image=var_dictSteamData.get("header_image"),
+            is_coming_soon=var_boolIsComingSoon,
+            release_date=var_dictSteamData.get("release_date"),
         )
+        var_listWarnings = []
+        if var_boolIsComingSoon:
+            var_listWarnings.append("Este jogo ainda não foi lançado. Previsões de preço não estão disponíveis.")
+            
         return PredictionResponse(
             game=var_objGameInfo,
             classificacao=None,
             regressao=None,
-            features_utilizadas={} if debug else None
+            features_utilizadas={} if debug else None,
+            warnings=var_listWarnings if var_listWarnings else None,
         )
 
     # 3. Histórico de preços
     var_listHistorico = await ITADClient.get_price_history(var_intAppid, arg_floatPrecoBase=var_floatPrice)
+    
+    var_listWarnings = []
+    if time.time() < ITADClient.rate_limit_until:
+        var_listWarnings.append("A API de histórico de preços (ITAD) atingiu o limite de requisições. O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
 
     # 4. Features
     var_dfFeatures = gerar_features_para_inferencia(
@@ -188,6 +221,8 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
         price=var_floatPrice,
         review_score=var_dictSteamData.get("review_score"),
         header_image=var_dictSteamData.get("header_image"),
+        is_coming_soon=var_boolIsComingSoon,
+        release_date=var_dictSteamData.get("release_date"),
     )
 
     return PredictionResponse(
@@ -195,6 +230,7 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
         classificacao=var_objClassificacao,
         regressao=var_objRegressao,
         features_utilizadas=var_dfFeatures.iloc[0].to_dict() if debug else None,
+        warnings=var_listWarnings if var_listWarnings else None,
     )
 
 

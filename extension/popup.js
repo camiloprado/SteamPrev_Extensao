@@ -174,6 +174,28 @@ function showResults(arg_dictData) {
   hideAll();
   elResults.style.display = "block";
 
+  // Limpa avisos anteriores
+  document.querySelectorAll(".api-warning").forEach(w => w.remove());
+  const var_listWarnings = arg_dictData.warnings || [];
+  if (var_listWarnings.length > 0) {
+    const elWarningsContainer = document.createElement("div");
+    elWarningsContainer.className = "api-warning";
+    elWarningsContainer.style.backgroundColor = "var(--color-bg-alt)";
+    elWarningsContainer.style.border = "1px solid var(--color-accent)";
+    elWarningsContainer.style.color = "var(--color-accent)";
+    elWarningsContainer.style.padding = "10px";
+    elWarningsContainer.style.marginBottom = "15px";
+    elWarningsContainer.style.borderRadius = "8px";
+    elWarningsContainer.style.fontSize = "0.9rem";
+    var_listWarnings.forEach(w => {
+      const p = document.createElement("p");
+      p.style.margin = "5px 0";
+      p.textContent = `⚠️ ${w}`;
+      elWarningsContainer.appendChild(p);
+    });
+    elResults.insertBefore(elWarningsContainer, elResults.firstChild);
+  }
+
   const var_dictGame = arg_dictData.game || {};
   const var_dictClassificacao = arg_dictData.classificacao;
   const var_dictRegressao = arg_dictData.regressao;
@@ -189,9 +211,20 @@ function showResults(arg_dictData) {
     elGameImage.style.display = "none";
   }
 
+  const elGameRelease = document.getElementById("gameRelease");
+  if (var_dictGame.release_date) {
+    elGameRelease.textContent = `📅 Lançamento: ${var_dictGame.release_date}`;
+  } else {
+    elGameRelease.textContent = "";
+  }
+
   const var_floatPrice = var_dictGame.price || 0;
-  document.getElementById("gamePrice").textContent =
-    var_floatPrice > 0 ? `R$ ${var_floatPrice.toFixed(2)}` : "Gratuito";
+  if (var_dictGame.is_coming_soon) {
+    document.getElementById("gamePrice").textContent = "Não Lançado";
+  } else {
+    document.getElementById("gamePrice").textContent =
+      var_floatPrice > 0 ? `R$ ${var_floatPrice.toFixed(2)}` : "Gratuito";
+  }
 
   document.getElementById("gameReview").textContent =
     var_dictGame.review_score ? `⭐ ${var_dictGame.review_score}%` : "N/A";
@@ -264,7 +297,8 @@ function showResults(arg_dictData) {
     // Mostra o card de detalhes se houver predição de desconto
     if (var_dictRegressao.desconto_previsto_pct > 0) {
       elRegDetails.style.display = "block";
-      document.getElementById("regDiscount").textContent = `${var_dictRegressao.desconto_previsto_pct}% OFF`;
+      const var_floatMargem = var_dictRegressao.desconto_margem_erro || 0.0;
+      document.getElementById("regDiscount").textContent = `${var_dictRegressao.desconto_previsto_pct}% OFF (± ${var_floatMargem}%)`;
       
       const var_floatPrecoEst = var_dictRegressao.preco_estimado;
       document.getElementById("regPrice").textContent = var_floatPrecoEst > 0 

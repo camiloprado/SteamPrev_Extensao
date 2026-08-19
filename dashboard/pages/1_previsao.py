@@ -18,12 +18,36 @@ api_url = st.session_state.get("api_url", "http://localhost:8000")
 # ── Formulário de Busca ──
 col_search, col_btn = st.columns([4, 1])
 
+@st.cache_data
+def get_game_catalog():
+    import json
+    try:
+        with open("resources/dados/steam_applist.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # Ordenar alfabeticamente para facilitar a vida
+        data_sorted = sorted([g for g in data if g.get("name")], key=lambda x: x["name"])
+        return {f"{g['name']} ({g['appid']})": g['appid'] for g in data_sorted}
+    except Exception:
+        return {}
+
+game_catalog = get_game_catalog()
+
 with col_search:
-    query = st.text_input(
-        "🎮 AppID do Jogo",
-        placeholder="Ex: 1245620 (Elden Ring), 730 (CS2)...",
-        label_visibility="collapsed",
-    )
+    modo_busca = st.radio("Método de Busca", ["Nome (Autocomplete)", "AppID Manual"], horizontal=True, label_visibility="collapsed")
+    if "Nome" in modo_busca:
+        game_selected = st.selectbox(
+            "🎮 Escolha o Jogo",
+            options=[""] + list(game_catalog.keys()),
+            index=0,
+            label_visibility="collapsed"
+        )
+        query = str(game_catalog[game_selected]) if game_selected else ""
+    else:
+        query = st.text_input(
+            "🎮 AppID do Jogo",
+            placeholder="Ex: 1245620",
+            label_visibility="collapsed",
+        )
 
 with col_btn:
     horizonte_opcoes = {
@@ -39,7 +63,7 @@ with col_btn:
         format_func=lambda x: horizonte_opcoes[x],
         label_visibility="collapsed",
     )
-    predict_btn = st.button("🔮 Prever", use_container_width=True, type="primary")
+    predict_btn = st.button("🔮 Prever", width="stretch", type="primary")
 
 # ── Jogos Populares (atalhos) ──
 st.markdown("**Jogos populares:**")
@@ -55,7 +79,7 @@ popular_games = [
 
 for i, (name, appid) in enumerate(popular_games):
     with popular_cols[i]:
-        if st.button(name, key=f"pop_{appid}", use_container_width=True):
+        if st.button(name, key=f"pop_{appid}", width="stretch"):
             query = appid
             predict_btn = True
 
@@ -81,6 +105,12 @@ if predict_btn and query:
                 clf = data.get("classificacao")
                 reg = data.get("regressao")
 
+                # ── Exibir Avisos da API ──
+                warnings = data.get("warnings")
+                if warnings:
+                    for w in warnings:
+                        st.warning(f"⚠️ {w}")
+
                 # ── Info do Jogo ──
                 st.markdown("---")
                 col_img, col_info = st.columns([1, 3])
@@ -88,14 +118,21 @@ if predict_btn and query:
                 with col_img:
                     header = game.get("header_image")
                     if header:
-                        st.image(header, use_container_width=True)
+                        st.image(header, width="stretch")
 
                 with col_info:
                     st.markdown(f"## 🎮 {game.get('name', 'Jogo')}")
+                    release_date = game.get("release_date")
+                    if release_date:
+                        st.caption(f"📅 Lançamento: {release_date}")
                     ci1, ci2, ci3 = st.columns(3)
                     with ci1:
                         price = game.get("price", 0)
-                        st.metric("💰 Preço", f"R$ {price:.2f}" if price > 0 else "Gratuito")
+                        is_coming_soon = game.get("is_coming_soon", False)
+                        if is_coming_soon:
+                            st.metric("💰 Preço", "Não Lançado")
+                        else:
+                            st.metric("💰 Preço", f"R$ {price:.2f}" if price > 0 else "Gratuito")
                     with ci2:
                         st.metric("⭐ Reviews", f"{game.get('review_score', 'N/A')}%")
                     with ci3:
@@ -149,7 +186,7 @@ if predict_btn and query:
                                     height=350,
                                     margin=dict(t=50, b=30),
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width="stretch")
                         else:
                             st.warning("Modelo de classificação não disponível")
 
@@ -187,14 +224,15 @@ if predict_btn and query:
                                 height=350,
                                 margin=dict(t=60, b=30),
                             )
-                            st.plotly_chart(fig_gauge, use_container_width=True)
+                            st.plotly_chart(fig_gauge, width="stretch")
                             st.info(descricao)
                             
                             # Exibir Desconto Previsto
                             desconto = reg.get("desconto_previsto_pct", 0)
+                            margem = reg.get("desconto_margem_erro", 0.0)
                             preco_est = reg.get("preco_estimado", 0.0)
                             if desconto > 0:
-                                st.success(f"🏷️ Desconto Previsto: **{desconto}%** (Estimativa: R$ {preco_est:.2f})")
+                                st.success(f"🏷️ Desconto Previsto: **{desconto}% (± {margem}%)** (Estimativa: R$ {preco_est:.2f})")
                             else:
                                 st.warning("📉 Modelo preditor de desconto ausente nos arquivos base.")
                         else:
