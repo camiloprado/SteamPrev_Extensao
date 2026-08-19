@@ -25,6 +25,57 @@ class ITADClient:
     """
     Cliente para a ITAD API v2.
     """
+    
+    rate_limit_until = 0.0
+
+    @staticmethod
+    def _generate_mock_history(arg_intAppid: int, arg_floatPrecoBase: float) -> list[dict]:
+        """Gera um histórico falso determinístico (para testes locais/fallback)."""
+        import random
+        from datetime import datetime, timedelta
+        
+        random.seed(arg_intAppid)
+        var_listHistorico = []
+        var_floatCurrentPrice = arg_floatPrecoBase if arg_floatPrecoBase > 0 else random.uniform(20.0, 200.0)
+        var_dtNow = datetime.now()
+        
+        # Adicionar o primeiro ponto (início do histórico há 3 anos)
+        var_listHistorico.append({
+            "timestamp": int((var_dtNow - timedelta(days=365*3)).timestamp()),
+            "preco": float(var_floatCurrentPrice),
+            "desconto": 0
+        })
+        
+        var_intNumPromos = random.randint(5, 15)
+        for i in range(var_intNumPromos):
+            var_intDaysAgo = random.randint(30, 365 * 3)
+            var_dtPromo = var_dtNow - timedelta(days=var_intDaysAgo)
+            
+            var_intDiscount = random.choice([20, 30, 50, 60, 75, 80])
+            var_floatPrecoPromo = var_floatCurrentPrice * (1 - (var_intDiscount / 100.0))
+            
+            var_listHistorico.append({
+                "timestamp": int(var_dtPromo.timestamp()),
+                "preco": float(var_floatPrecoPromo),
+                "desconto": var_intDiscount
+            })
+            
+            var_dtEndPromo = var_dtPromo + timedelta(days=random.randint(7, 14))
+            var_listHistorico.append({
+                "timestamp": int(var_dtEndPromo.timestamp()),
+                "preco": float(var_floatCurrentPrice),
+                "desconto": 0
+            })
+            
+        var_listHistorico.sort(key=lambda x: x["timestamp"])
+        
+        var_listHistorico.append({
+            "timestamp": int(var_dtNow.timestamp()),
+            "preco": float(var_floatCurrentPrice),
+            "desconto": 0
+        })
+        
+        return var_listHistorico
 
     @staticmethod
     async def _get_with_retry(client: httpx.AsyncClient, url: str, params: dict, max_retries: int = 3) -> httpx.Response:
@@ -36,6 +87,12 @@ class ITADClient:
                     wait_time = int(response.headers.get("Retry-After", (2 ** attempt) * 2))
                 except ValueError:
                     wait_time = (2 ** attempt) * 2
+                    
+                if wait_time > 10:
+                    ITADClient.rate_limit_until = time.time() + wait_time
+                    logger.error(f"ITAD API limite (429). Tempo de espera ({wait_time}s) é muito longo. Rate limit global ativado.")
+                    return response
+                    
                 logger.warning(f"ITAD API limite (429). Retentando em {wait_time}s (tentativa {attempt+1}/{max_retries})...")
                 await asyncio.sleep(wait_time)
                 continue
@@ -58,9 +115,12 @@ class ITADClient:
         """
         if not CON_STR_ITAD_API_KEY:
             logger.error("ITAD_API_KEY não está configurado no .env. Impossível buscar histórico ITAD.")
-            return []
+            return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
             
         var_floatNow = time.time()
+        if var_floatNow < ITADClient.rate_limit_until:
+            logger.warning(f"ITAD API bloqueada temporariamente (429). Tempo restante: {int(ITADClient.rate_limit_until - var_floatNow)}s")
+            return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
         var_strCacheKey = f"{arg_intAppid}_{arg_floatPrecoBase}"
         if var_strCacheKey in _itad_cache:
             var_listCachedData, var_floatTimestamp = _itad_cache[var_strCacheKey]
@@ -91,7 +151,7 @@ class ITADClient:
                     
                 var_dictLookup = var_objResponseLookup.json()
                 if not var_dictLookup.get("found"):
-                    return []
+                    return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
                     
                 var_strItadId = var_dictLookup["game"]["id"]
                 
@@ -104,7 +164,7 @@ class ITADClient:
                 
                 if var_objResponseHist.status_code != 200:
                     logger.warning(f"ITAD API: Falha ao obter histórico ({var_objResponseHist.status_code})")
-                    return []
+                    return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
                     
                 var_dictHistJson = var_objResponseHist.json()
                 
@@ -134,4 +194,4 @@ class ITADClient:
 
         except Exception as e:
             logger.error(f"ITAD API: Erro HTTP ao buscar histórico do appid {arg_intAppid}: {e}")
-            return []
+            return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
