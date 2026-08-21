@@ -1,18 +1,22 @@
 /* ═══════════════════════════════════════════════════════════
    Previsor Steam — Chrome Extension Popup Styles
-   Dark glassmorphism theme
+   Glassmorphism theme — paleta derivada do logo (azul-marinho,
+   laranja e verde), com suporte a modo claro e escuro.
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  --bg-primary: #0a0a1a;
-  --bg-secondary: #12122a;
-  --bg-card: rgba(20, 20, 50, 0.8);
-  --bg-card-hover: rgba(30, 30, 60, 0.9);
-  --text-primary: #e8e8f0;
-  --text-secondary: #8888aa;
-  --text-muted: #5555770;
-  --accent-purple: #7c3aed;
-  --accent-blue: #3b82f6;
+  /* Dark (padrão) */
+  --bg-primary: #070f18;
+  --bg-secondary: #0f1c2c;
+  --bg-card: rgba(18, 35, 54, 0.8);
+  --bg-card-hover: rgba(26, 48, 72, 0.9);
+  --text-primary: #e8ecf2;
+  --text-secondary: #8b9bb4;
+  --text-muted: #556077;
+  --accent-primary: #e8792d;
+  --accent-primary-rgb: 232, 121, 45;
+  --accent-secondary: #3d8bd4;
+  --accent-secondary-rgb: 61, 139, 212;
   --accent-green: #22c55e;
   --accent-yellow: #f59e0b;
   --accent-red: #ef4444;
@@ -21,6 +25,66 @@
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+/* Explicit dark (vence a preferência do sistema quando alternado manualmente) */
+:root[data-theme="dark"] {
+  --bg-primary: #070f18;
+  --bg-secondary: #0f1c2c;
+  --bg-card: rgba(18, 35, 54, 0.8);
+  --bg-card-hover: rgba(26, 48, 72, 0.9);
+  --text-primary: #e8ecf2;
+  --text-secondary: #8b9bb4;
+  --text-muted: #556077;
+  --accent-primary: #e8792d;
+  --accent-primary-rgb: 232, 121, 45;
+  --accent-secondary: #3d8bd4;
+  --accent-secondary-rgb: 61, 139, 212;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+/* Light — usada quando o sistema prefere claro e não houve alternância manual para escuro */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-primary: #f4f6fa;
+    --bg-secondary: #e8ebf2;
+    --bg-card: rgba(255, 255, 255, 0.75);
+    --bg-card-hover: rgba(255, 255, 255, 0.95);
+    --text-primary: #1a2233;
+    --text-secondary: #5b6478;
+    --text-muted: #8891a3;
+    --accent-primary: #c2600f;
+    --accent-primary-rgb: 194, 96, 15;
+    --accent-secondary: #1f5c94;
+    --accent-secondary-rgb: 31, 92, 148;
+    --border-color: rgba(20, 30, 50, 0.08);
+    --glass-bg: rgba(20, 30, 50, 0.04);
+    --shadow: 0 4px 24px rgba(20, 30, 50, 0.12);
+    color-scheme: light;
+  }
+}
+
+/* Light — alternância manual, vence a preferência do sistema em qualquer direção */
+:root[data-theme="light"] {
+  --bg-primary: #f4f6fa;
+  --bg-secondary: #e8ebf2;
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --text-primary: #1a2233;
+  --text-secondary: #5b6478;
+  --text-muted: #8891a3;
+  --accent-primary: #c2600f;
+  --accent-primary-rgb: 194, 96, 15;
+  --accent-secondary: #1f5c94;
+  --accent-secondary-rgb: 31, 92, 148;
+  --border-color: rgba(20, 30, 50, 0.08);
+  --glass-bg: rgba(20, 30, 50, 0.04);
+  --shadow: 0 4px 24px rgba(20, 30, 50, 0.12);
+  color-scheme: light;
 }
 
 * {
@@ -36,6 +100,7 @@ body {
   width: 400px;
   min-height: 480px;
   overflow-x: hidden;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* ── Header ── */
@@ -44,19 +109,19 @@ body {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(59, 130, 246, 0.1));
+  background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.15), rgba(var(--accent-secondary-rgb), 0.1));
   border-bottom: 1px solid var(--border-color);
 }
 
 .header-logo {
   font-size: 28px;
-  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
+  filter: drop-shadow(0 0 8px rgba(var(--accent-primary-rgb), 0.5));
 }
 
 .header-text h1 {
   font-size: 16px;
   font-weight: 700;
-  background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -135,15 +200,15 @@ body {
 }
 
 .settings-input-group input:focus {
-  border-color: var(--accent-purple);
+  border-color: var(--accent-primary);
 }
 
 .btn-save {
   padding: 7px 12px;
-  background: rgba(124, 58, 237, 0.2);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: rgba(var(--accent-primary-rgb), 0.2);
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
   border-radius: var(--radius-sm);
-  color: var(--accent-purple);
+  color: var(--accent-primary);
   font-size: 11px;
   font-weight: 600;
   font-family: inherit;
@@ -153,7 +218,7 @@ body {
 }
 
 .btn-save:hover {
-  background: rgba(124, 58, 237, 0.3);
+  background: rgba(var(--accent-primary-rgb), 0.3);
 }
 
 .settings-hint {
@@ -183,8 +248,8 @@ body {
 }
 
 #searchInput:focus {
-  border-color: var(--accent-purple);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.15);
 }
 
 #searchInput::placeholder {
@@ -196,7 +261,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 10px 16px;
-  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   border: none;
   border-radius: var(--radius-sm);
   color: white;
@@ -233,8 +298,8 @@ body {
 }
 
 .chip:hover {
-  background: rgba(124, 58, 237, 0.15);
-  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(var(--accent-primary-rgb), 0.15);
+  border-color: rgba(var(--accent-primary-rgb), 0.3);
   color: var(--text-primary);
 }
 
@@ -251,7 +316,7 @@ body {
   width: 32px;
   height: 32px;
   border: 3px solid var(--border-color);
-  border-top-color: var(--accent-purple);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -306,11 +371,11 @@ body {
 
 .badge {
   padding: 2px 8px;
-  background: rgba(124, 58, 237, 0.15);
+  background: rgba(var(--accent-primary-rgb), 0.15);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-purple);
+  color: var(--accent-primary);
 }
 
 .badge-outline {
@@ -353,7 +418,7 @@ body {
 }
 
 .prediction-value.days {
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -391,7 +456,7 @@ body {
 .bar-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
   transition: width 0.5s ease;
   width: 0%;
 }
@@ -399,7 +464,7 @@ body {
 .confidence-value {
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-purple);
+  color: var(--accent-primary);
   min-width: 36px;
   text-align: right;
 }
@@ -479,7 +544,7 @@ body {
 }
 
 .footer a {
-  color: var(--accent-purple);
+  color: var(--accent-primary);
   text-decoration: none;
   font-weight: 500;
 }

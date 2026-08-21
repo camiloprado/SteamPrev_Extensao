@@ -23,12 +23,76 @@ const elSaveApiBtn = document.getElementById("saveApiBtn");
 const elSettingsToggle = document.getElementById("settingsToggle");
 const elSettingsPanel = document.getElementById("settingsPanel");
 const elHorizonSelect = document.getElementById("horizonSelect");
+const elThemeToggle = document.getElementById("themeToggle");
+
 // ── Init ──
 document.addEventListener("DOMContentLoaded", () => {
+  inicializarTema();
   carregarUrlApi();
   setupEventListeners();
   checkActiveTab();
 });
+
+/**
+ * Aplica o tema (claro/escuro) na página e atualiza o ícone da toolbar.
+ * Sem preferência salva, segue o tema do sistema operacional.
+ */
+function inicializarTema() {
+  chrome.storage.local.get(["theme"], (result) => {
+    const var_strTemaSalvo = result.theme || null; // "light" | "dark" | null (auto)
+    aplicarTema(var_strTemaSalvo);
+
+    // Acompanha mudanças do SO em tempo real enquanto não houver escolha manual
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      chrome.storage.local.get(["theme"], (r) => {
+        if (!r.theme) aplicarTema(null);
+      });
+    });
+  });
+
+  if (elThemeToggle) {
+    elThemeToggle.addEventListener("click", () => {
+      const var_strTemaEfetivo = document.documentElement.getAttribute("data-theme") || temaDoSistema();
+      const var_strNovoTema = var_strTemaEfetivo === "dark" ? "light" : "dark";
+      chrome.storage.local.set({ theme: var_strNovoTema }, () => aplicarTema(var_strNovoTema));
+    });
+  }
+}
+
+function temaDoSistema() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+/**
+ * @param {"light"|"dark"|null} arg_strTema - null = seguir o sistema
+ */
+function aplicarTema(arg_strTema) {
+  const var_strEfetivo = arg_strTema || temaDoSistema();
+  document.documentElement.setAttribute("data-theme", var_strEfetivo);
+
+  if (elThemeToggle) {
+    elThemeToggle.textContent = var_strEfetivo === "dark" ? "🌙" : "☀️";
+    elThemeToggle.title = var_strEfetivo === "dark" ? "Tema escuro (clique para claro)" : "Tema claro (clique para escuro)";
+  }
+
+  atualizarIconeToolbar(var_strEfetivo);
+}
+
+/**
+ * Troca o ícone da toolbar para a variante que contrasta com o tema ativo
+ * (Chrome/Opera/Brave não suportam troca automática via manifest).
+ */
+function atualizarIconeToolbar(arg_strTema) {
+  if (!chrome.action || !chrome.action.setIcon) return;
+  const var_strPasta = arg_strTema === "dark" ? "icons/dark" : "icons";
+  chrome.action.setIcon({
+    path: {
+      16: `${var_strPasta}/icon16.png`,
+      48: `${var_strPasta}/icon48.png`,
+      128: `${var_strPasta}/icon128.png`,
+    },
+  });
+}
 
 /**
  * Lê a URL da aba ativa. Se for a loja da Steam, extrai o AppID.
