@@ -8,7 +8,7 @@ var_strDir = path.abspath(path.dirname(__file__))
 
 var_strDocsPath = "docs"
 var_strTestsPath = "tests"
-var_strMainPackage = "prj_TCC_PREVISOR_STEAM"
+var_strMainPackage = "steamprev_extensao"
 
 for var_strRaiz, var_listSubDir, var_listArquivos in walk(var_strDir):
     for var_strSub in var_listSubDir:

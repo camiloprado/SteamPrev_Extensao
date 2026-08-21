@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request, HTTPException
 import pandas as pd
 import numpy as np
+import asyncio
 import logging
 import time
 
@@ -210,10 +211,16 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
     )
 
     # 5. Hot-reload check & Dynamic Model Loading
-    var_objModelManager.ensure_models_for_horizon(input_data.horizonte)
+    # joblib.load() é síncrono e pode envolver I/O de disco pesado (modelos com
+    # centenas de MB) — roda em thread separada para não bloquear o event loop.
+    await asyncio.to_thread(var_objModelManager.ensure_models_for_horizon, input_data.horizonte)
 
     # 6. Predição
-    var_objClassificacao, var_objRegressao = _executar_predicao(var_objModelManager, var_dfFeatures)
+    # predict()/predict_proba() são síncronos e potencialmente custosos (CPU) —
+    # também rodam em thread separada.
+    var_objClassificacao, var_objRegressao = await asyncio.to_thread(
+        _executar_predicao, var_objModelManager, var_dfFeatures
+    )
 
     var_objGameInfo = GameInfo(
         appid=var_intAppid,
@@ -268,7 +275,9 @@ async def predict_from_features(input_data: GameFeaturesInput, request: Request,
     var_dictFeatures = input_data.model_dump()
     var_dfFeatures = pd.DataFrame([var_dictFeatures])[CON_LIST_FEATURE_COLUMNS]
 
-    var_objClassificacao, var_objRegressao = _executar_predicao(var_objModelManager, var_dfFeatures)
+    var_objClassificacao, var_objRegressao = await asyncio.to_thread(
+        _executar_predicao, var_objModelManager, var_dfFeatures
+    )
 
     var_objGameInfo = GameInfo(appid=0, name="Input Manual")
 

@@ -66,14 +66,22 @@ if var_strCorsOrigins:
     var_strOriginRegex = None
 else:
     var_listOrigins = []
-    # Expressão regular para aceitar conexões locais e extensões (Chrome, Edge, Brave, Opera, Firefox)
+    # Expressão regular para aceitar conexões locais e extensões (Chrome, Edge, Brave, Opera, Firefox).
+    # TODO: quando a extensão for publicada nas lojas com um ID fixo, restringir
+    # "chrome-extension://.*" e "moz-extension://.*" ao ID específico da extensão
+    # publicada (ex.: chrome-extension://<ID_FIXO>), em vez de aceitar qualquer extensão.
     var_strOriginRegex = r"https?://localhost:\d+|https?://127\.0\.0\.1:\d+|chrome-extension://.*|moz-extension://.*"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=var_listOrigins,
     allow_origin_regex=var_strOriginRegex,
-    allow_credentials=True,
+    # A API não usa cookies/sessão em nenhum endpoint (nenhuma rota em api/routes/
+    # lê ou define cookies) — não há necessidade real de allow_credentials=True.
+    # Mantê-lo False evita combinar um regex de origem permissivo com credenciais,
+    # o que reduziria a superfície de risco de CSRF/CORS caso cookies sejam
+    # introduzidos futuramente sem revisitar esta configuração.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

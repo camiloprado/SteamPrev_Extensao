@@ -143,7 +143,7 @@ def embed_status(arg_dictHealthData: dict) -> discord.Embed:
         name="Modelos",
         value=(
             f"Classificação: {'✅' if var_dictModels.get('classificacao') else '❌'}\n"
-            f"Regressão: {'✅' if var_dictModels.get('regressao') else '❌'}\n"
+            f"Regressão: {'✅' if var_dictModels.get('regressao_dias') else '❌'}\n"
             f"Pipeline: {'✅' if var_dictModels.get('pipeline_escalonamento') else '❌'}"
         ),
         inline=False,

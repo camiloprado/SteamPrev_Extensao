@@ -1,7 +1,7 @@
 """Pydantic schemas para request/response da API."""
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
@@ -10,10 +10,10 @@ class GameQueryInput(BaseModel):
     """Input que aceita AppID ou nome do jogo."""
     query: str = Field(
         ...,
-        description="AppID numérico do jogo.",
-        examples=["730", "1245620"],
+        description="AppID numérico do jogo ou nome (busca por nome exato, prefixo ou substring).",
+        examples=["730", "1245620", "Counter-Strike"],
     )
-    horizonte: str = Field(
+    horizonte: Literal["30d", "60d", "90d", "latest"] = Field(
         default="30d",
         description="Horizonte da previsão: '30d', '60d', '90d' ou 'latest' (melhor geral)",
     )

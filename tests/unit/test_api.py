@@ -44,8 +44,22 @@ class TestPredict:
     """Testes dos endpoints de predição."""
 
     def test_predict_invalid_query(self, client):
+        # A API aceita busca por nome (não só AppID numérico) via core/search.py.
+        # Uma query que não corresponde a nenhum jogo deve retornar 404, não 400.
+        var_objResponse = client.post("/predict/game", json={"query": "zzzznonexistentgame12345"})
+        assert var_objResponse.status_code == 404
+
+    def test_predict_by_name(self, client):
+        # Busca por nome é um comportamento intencional e deve funcionar (200).
         var_objResponse = client.post("/predict/game", json={"query": "Counter-Strike"})
-        assert var_objResponse.status_code == 400
+        assert var_objResponse.status_code == 200
+
+    def test_predict_invalid_horizonte(self, client):
+        # horizonte fora do conjunto permitido deve gerar 422 (validação do Pydantic)
+        var_objResponse = client.post(
+            "/predict/game", json={"query": "1245620", "horizonte": "180d"}
+        )
+        assert var_objResponse.status_code == 422
 
     def test_predict_by_appid(self, client):
         var_objResponse = client.post("/predict/game", json={"query": "1245620"})
@@ -80,6 +94,75 @@ class TestPredict:
         var_dictData = var_objResponse.json()
         if var_dictData.get("regressao"):
             assert var_dictData["regressao"]["dias_estimados"] >= 0
+
+
+class TestModelRoutingRegression:
+    """
+    Regressão do bug do Item A: a resolução de modelo de regressão (dias) por
+    horizonte deve priorizar a nomenclatura atual "_dias_" (modelos reais,
+    diferentes por horizonte) sobre a nomenclatura legada "modelo_regressao_{h}.joblib"
+    (que já existiu como arquivo dummy/placeholder byte-idêntico entre horizontes).
+
+    Este teste simula exatamente o cenário do bug original — arquivo legado e
+    arquivo "_dias_" coexistindo no diretório de modelos — e falharia se a
+    ordem de prioridade fosse invertida novamente.
+    """
+
+    def test_regressao_dias_prioriza_nomenclatura_atual_sobre_legado(self, tmp_path, monkeypatch):
+        from pathlib import Path
+        from api.models_loader import ModelManager
+
+        # Recria o cenário do bug: arquivo legado (dummy) e arquivo real "_dias_"
+        # presentes ao mesmo tempo, para cada horizonte.
+        for var_strHorizonte in ["30d", "60d", "90d"]:
+            (tmp_path / f"modelo_regressao_{var_strHorizonte}.joblib").write_bytes(b"LEGACY_DUMMY")
+            (tmp_path / f"modelo_regressao_dias_{var_strHorizonte}.joblib").write_bytes(
+                f"REAL_{var_strHorizonte}".encode()
+            )
+
+        var_listPathsCarregados = []
+
+        def fake_joblib_load(path):
+            var_objPath = Path(path)
+            var_listPathsCarregados.append(var_objPath)
+            return var_objPath.name  # devolve o nome do arquivo como "modelo" fake
+
+        monkeypatch.setattr("api.models_loader.joblib.load", fake_joblib_load)
+
+        var_objManager = ModelManager(str(tmp_path))
+
+        var_dictResultadosPorHorizonte = {}
+        for var_strHorizonte in ["30d", "60d", "90d"]:
+            var_objManager.ensure_models_for_horizon(var_strHorizonte)
+            var_dictResultadosPorHorizonte[var_strHorizonte] = var_objManager.regressao_model
+
+        # Cada horizonte deve ter carregado o arquivo "_dias_" correspondente,
+        # nunca o arquivo legado/dummy.
+        for var_strHorizonte in ["30d", "60d", "90d"]:
+            assert (
+                var_dictResultadosPorHorizonte[var_strHorizonte]
+                == f"modelo_regressao_dias_{var_strHorizonte}.joblib"
+            )
+
+        # E os 3 horizontes devem ter carregado ARQUIVOS DIFERENTES entre si —
+        # o bug original fazia todos caírem no mesmo dummy.
+        assert len(set(var_dictResultadosPorHorizonte.values())) == 3
+
+    def test_regressao_dias_horizonte_latest_usa_30d(self, tmp_path, monkeypatch):
+        from pathlib import Path
+        from api.models_loader import ModelManager
+
+        (tmp_path / "modelo_regressao_dias_30d.joblib").write_bytes(b"REAL_30")
+
+        def fake_joblib_load(path):
+            return Path(path).name
+
+        monkeypatch.setattr("api.models_loader.joblib.load", fake_joblib_load)
+
+        var_objManager = ModelManager(str(tmp_path))
+        var_objManager.ensure_models_for_horizon("latest")
+
+        assert var_objManager.regressao_model == "modelo_regressao_dias_30d.joblib"
 
 
 class TestRoot:

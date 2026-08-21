@@ -5,6 +5,7 @@ Carrega na inicialização e suporta hot-reload via timestamp do arquivo.
 
 import joblib
 import logging
+import threading
 from pathlib import Path
 from datetime import datetime
 
@@ -27,6 +28,13 @@ class ModelManager:
         
         self._var_boolLoaded = False
         self._var_strCurrentHorizon = "latest"
+
+        # Protege a troca/carregamento de modelos (dicts de cache + horizonte atual)
+        # contra condições de corrida quando requisições concorrentes rodam
+        # ensure_models_for_horizon() em threads diferentes (ex.: via asyncio.to_thread
+        # nos handlers da API). predict()/predict_proba() não usam este lock —
+        # apenas a troca de modelo em si precisa ser exclusiva.
+        self._var_lockHorizonte = threading.Lock()
 
     def load_models(self) -> None:
         """
@@ -64,7 +72,17 @@ class ModelManager:
 
         Suporta nomenclatura padronizada (pós-exportação) e fallback
         para nomenclatura antiga com nome do algoritmo.
+
+        Protegido por lock: a troca/carregamento de modelos é exclusiva entre
+        threads (ex.: chamadas concorrentes via asyncio.to_thread), evitando
+        corrupção dos dicts de cache e do horizonte atual. predict()/predict_proba()
+        NÃO usam este lock e podem rodar livremente em paralelo.
         """
+        with self._var_lockHorizonte:
+            return self._ensure_models_for_horizon_locked(horizonte)
+
+    def _ensure_models_for_horizon_locked(self, horizonte: str) -> bool:
+        """Implementação real de ensure_models_for_horizon; chamar sempre com o lock adquirido."""
         var_boolReloaded = False
         import gc
 
@@ -83,17 +101,27 @@ class ModelManager:
         if not var_pathClassificacao.exists():
             var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
 
-        # Regressão Dias: tenta nomenclatura padronizada primeiro
+        # Regressão Dias: tenta PRIMEIRO a nomenclatura atual ("_dias_"), que é a
+        # usada pelo scripts/download_models.py e pelo manifest.json (modelos reais,
+        # diferentes por horizonte). Os arquivos "modelo_regressao_{horizonte}.joblib"
+        # (sem "_dias_") são um fallback legado — cuidado: se algum dia eles voltarem a
+        # existir no diretório de modelos, NÃO devem ter prioridade sobre a nomenclatura
+        # atual, pois historicamente já existiram versões dummy/placeholder desses
+        # arquivos (byte-idênticas entre horizontes) que mascaravam os modelos reais.
         if var_strHorizonte == "latest":
-            var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
+            var_pathRegressao = self._var_pathModels / "modelo_regressao_dias_30d.joblib"
         else:
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
 
-        # Fallback: nomenclatura antiga
+        # Fallback: nomenclatura legada (sem "_dias_")
+        if not var_pathRegressao.exists():
+            if var_strHorizonte == "latest":
+                var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
+            else:
+                var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
+        # Fallback: nomenclatura legada com nome do algoritmo
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
-        if not var_pathRegressao.exists():
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
             
         # Regressão Desconto:
         if var_strHorizonte == "latest":

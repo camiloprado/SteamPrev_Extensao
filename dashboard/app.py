@@ -188,7 +188,7 @@ try:
     with col_s1:
         st.metric("Classificação", "✅ Ativo" if models.get("classificacao") else "❌ Inativo")
     with col_s2:
-        st.metric("Regressão", "✅ Ativo" if models.get("regressao") else "❌ Inativo")
+        st.metric("Regressão", "✅ Ativo" if models.get("regressao_dias") else "❌ Inativo")
     with col_s3:
         st.metric("Pipeline", "✅ Ativo" if models.get("pipeline_escalonamento") else "❌ Inativo")
 
