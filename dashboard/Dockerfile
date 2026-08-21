@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Código
 COPY dashboard/ ./dashboard/
 COPY core/ ./core/
+COPY resources/dados/ ./resources/dados/
 
 # Expõe a porta
 EXPOSE 8501

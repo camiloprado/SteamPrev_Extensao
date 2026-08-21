@@ -3,7 +3,10 @@ Dashboard Streamlit — Previsor Steam
 Página principal com visão geral do sistema.
 """
 
+import os
 import streamlit as st
+
+CON_STR_DEFAULT_API_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 
 # ── Configuração da Página ──
 st.set_page_config(
@@ -102,8 +105,8 @@ with st.sidebar:
     st.markdown("### ⚙️ Configuração da API")
     api_url = st.text_input(
         "URL da API",
-        value="http://localhost:8000",
-        help="Endereço da API FastAPI de inferência",
+        value=st.session_state.get("api_url", CON_STR_DEFAULT_API_URL),
+        help="Endereço da API FastAPI de inferência (API_BASE_URL no Render)",
     )
 
     # Salva no session state para uso nas pages

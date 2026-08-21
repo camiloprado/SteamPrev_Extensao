@@ -227,82 +227,6 @@ body {
   margin-top: 6px;
 }
 
-/* ── Search ── */
-.search-container {
-  display: flex;
-  gap: 8px;
-  padding: 16px 20px 8px;
-}
-
-#searchInput {
-  flex: 1;
-  padding: 10px 14px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-#searchInput:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.15);
-}
-
-#searchInput::placeholder {
-  color: var(--text-secondary);
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  border: none;
-  border-radius: var(--radius-sm);
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.1s ease;
-  white-space: nowrap;
-}
-
-.btn-primary:hover { opacity: 0.9; }
-.btn-primary:active { transform: scale(0.97); }
-.btn-icon { font-size: 14px; }
-
-/* ── Quick Games ── */
-.quick-games {
-  display: flex;
-  gap: 6px;
-  padding: 8px 20px 16px;
-  flex-wrap: wrap;
-}
-
-.chip {
-  padding: 5px 12px;
-  background: var(--glass-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.chip:hover {
-  background: rgba(var(--accent-primary-rgb), 0.15);
-  border-color: rgba(var(--accent-primary-rgb), 0.3);
-  color: var(--text-primary);
-}
-
 /* ── Loading ── */
 .loading {
   display: flex;
@@ -551,6 +475,25 @@ body {
 
 .footer a:hover {
   text-decoration: underline;
+}
+
+.footer-dashboard-btn {
+  padding: 6px 10px;
+  background: rgba(var(--accent-secondary-rgb), 0.18);
+  border: 1px solid rgba(var(--accent-secondary-rgb), 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--accent-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.footer-dashboard-btn:hover {
+  background: rgba(var(--accent-secondary-rgb), 0.28);
+  border-color: rgba(var(--accent-secondary-rgb), 0.5);
 }
 
 /* ── Animations ── */

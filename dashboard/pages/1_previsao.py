@@ -3,6 +3,7 @@ Página de Previsão Interativa — Previsor Steam
 Formulário para buscar jogos e visualizar previsões.
 """
 
+import os
 import streamlit as st
 import httpx
 import plotly.graph_objects as go
@@ -13,10 +14,10 @@ st.set_page_config(page_title="Previsão | Previsor Steam", page_icon="📊", la
 st.title("📊 Previsão de Preço")
 st.caption("Busque um jogo por nome ou AppID e veja a previsão de Machine Learning")
 
-api_url = st.session_state.get("api_url", "http://localhost:8000")
-
-# ── Formulário de Busca ──
-col_search, col_btn = st.columns([4, 1])
+api_url = (
+    st.session_state.get("api_url")
+    or os.getenv("API_BASE_URL", "http://localhost:8000")
+).rstrip("/")
 
 @st.cache_data
 def get_game_catalog():
@@ -31,41 +32,51 @@ def get_game_catalog():
         return {}
 
 game_catalog = get_game_catalog()
+horizonte_opcoes = {
+    "latest": "Padrão (Latest)",
+    "30d_latest": "30 Dias",
+    "60d_latest": "60 Dias",
+    "90d_latest": "90 Dias",
+}
 
-with col_search:
-    modo_busca = st.radio("Método de Busca", ["Nome (Autocomplete)", "AppID Manual"], horizontal=True, label_visibility="collapsed")
-    if "Nome" in modo_busca:
-        game_selected = st.selectbox(
-            "🎮 Escolha o Jogo",
-            options=[""] + list(game_catalog.keys()),
-            index=0,
-            label_visibility="collapsed"
-        )
-        query = str(game_catalog[game_selected]) if game_selected else ""
-    else:
-        query = st.text_input(
-            "🎮 AppID do Jogo",
-            placeholder="Ex: 1245620",
+# Radio fora do form para trocar o método de busca sem precisar de Enter
+modo_busca = st.radio(
+    "Método de Busca",
+    ["Nome (Autocomplete)", "AppID Manual"],
+    horizontal=True,
+    label_visibility="collapsed",
+)
+
+# ── Formulário de Busca (Enter confirma) ──
+with st.form("previsao_form", clear_on_submit=False):
+    col_search, col_btn = st.columns([4, 1])
+
+    with col_search:
+        if "Nome" in modo_busca:
+            game_selected = st.selectbox(
+                "🎮 Escolha o Jogo",
+                options=[""] + list(game_catalog.keys()),
+                index=0,
+                label_visibility="collapsed",
+            )
+            query = str(game_catalog[game_selected]) if game_selected else ""
+        else:
+            query = st.text_input(
+                "🎮 AppID do Jogo",
+                placeholder="Ex: 1245620 — pressione Enter para prever",
+                label_visibility="collapsed",
+            )
+
+    with col_btn:
+        horizonte_chave = st.selectbox(
+            "Horizonte",
+            options=list(horizonte_opcoes.keys()),
+            format_func=lambda x: horizonte_opcoes[x],
             label_visibility="collapsed",
         )
+        predict_btn = st.form_submit_button("🔮 Prever", width="stretch", type="primary")
 
-with col_btn:
-    horizonte_opcoes = {
-        "latest": "Padrão (Latest)",
-        "30d_latest": "30 Dias",
-        "60d_latest": "60 Dias",
-        "90d_latest": "90 Dias"
-    }
-    
-    horizonte_chave = st.selectbox(
-        "Horizonte",
-        options=list(horizonte_opcoes.keys()),
-        format_func=lambda x: horizonte_opcoes[x],
-        label_visibility="collapsed",
-    )
-    predict_btn = st.button("🔮 Prever", width="stretch", type="primary")
-
-# ── Jogos Populares (atalhos) ──
+# ── Jogos Populares (atalhos, fora do form) ──
 st.markdown("**Jogos populares:**")
 popular_cols = st.columns(6)
 popular_games = [

@@ -1,0 +1,41 @@
+# Blueprint Render — Previsor Steam
+# Não contém segredos. Chaves (ITAD/Steam) são pedidas no Dashboard (sync: false).
+#
+# A API pré-carrega os modelos .joblib (~1,5 GB em disco). Não use o plano Free
+# (512 MB) nela — o processo tende a morrer por falta de RAM.
+# Ver docs/deploy-render.md.
+
+services:
+  - type: web
+    name: steamprev-api
+    runtime: docker
+    plan: standard
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: MODELS_PATH
+        value: resources/models
+      - key: MODELS_BASE_URL
+        value: https://github.com/camiloprado/SteamPrev_Machine_Learning/releases/latest/download
+      - key: ITAD_API_KEY
+        sync: false
+      - key: STEAM_API_KEY
+        sync: false
+
+  - type: web
+    name: steamprev-dashboard
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./dashboard/Dockerfile
+    dockerContext: .
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PORT
+        value: "8501"
+      - key: API_BASE_URL
+        value: http://steamprev-api:8000
+      - key: ITAD_API_KEY
+        sync: false

@@ -11,10 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia código
+# Copia código (scripts/ é necessário para o download automático dos modelos)
 COPY api/ ./api/
 COPY core/ ./core/
 COPY resources/ ./resources/
+COPY scripts/ ./scripts/
 
 # Expõe a porta
 EXPOSE 8000

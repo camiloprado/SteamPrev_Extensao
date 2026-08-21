@@ -2,14 +2,16 @@
  * Previsor Steam — Extension Popup Logic
  * Compatível com Chrome, Opera e Brave (Manifest V3).
  *
- * A URL da API é gerenciada via chrome.storage.local,
- * com fallback para http://localhost:8000 se não configurada.
+ * A URL da API e do dashboard são gerenciadas via chrome.storage.local,
+ * com fallback para localhost se não configuradas.
  */
 
 const CON_STR_DEFAULT_API_URL = "http://localhost:8000";
+const CON_STR_DEFAULT_DASHBOARD_URL = "http://localhost:8501";
 
-// Estado global da URL da API (carregado do storage)
+// Estado global das URLs (carregado do storage)
 let _var_strApiBaseUrl = CON_STR_DEFAULT_API_URL;
+let _var_strDashboardUrl = CON_STR_DEFAULT_DASHBOARD_URL;
 let _var_strCurrentAppId = null;
 
 // ── DOM Elements ──
@@ -20,6 +22,9 @@ const elError = document.getElementById("error");
 const elErrorMsg = document.getElementById("errorMsg");
 const elApiUrlInput = document.getElementById("apiUrlInput");
 const elSaveApiBtn = document.getElementById("saveApiBtn");
+const elDashboardUrlInput = document.getElementById("dashboardUrlInput");
+const elSaveDashboardBtn = document.getElementById("saveDashboardBtn");
+const elOpenDashboardBtn = document.getElementById("openDashboardBtn");
 const elSettingsToggle = document.getElementById("settingsToggle");
 const elSettingsPanel = document.getElementById("settingsPanel");
 const elHorizonSelect = document.getElementById("horizonSelect");
@@ -30,7 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
   inicializarTema();
   carregarUrlApi();
   setupEventListeners();
-  checkActiveTab();
 });
 
 /**
@@ -95,31 +99,41 @@ function atualizarIconeToolbar(arg_strTema) {
 }
 
 /**
+ * Extrai o AppID de URLs da loja, inclusive com locale (/pt-br/app/123).
+ */
+function extrairAppId(arg_strUrl) {
+  if (!arg_strUrl || !arg_strUrl.includes("store.steampowered.com")) return null;
+  const var_objMatch = arg_strUrl.match(/\/app\/(\d+)/);
+  return var_objMatch ? var_objMatch[1] : null;
+}
+
+/**
  * Lê a URL da aba ativa. Se for a loja da Steam, extrai o AppID.
  */
 function checkActiveTab() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs && tabs.length > 0) {
-      const var_strUrl = tabs[0].url;
-      if (var_strUrl && var_strUrl.includes("store.steampowered.com/app/")) {
-        const var_objMatch = var_strUrl.match(/\/app\/(\d+)/);
-        if (var_objMatch && var_objMatch[1]) {
-          _var_strCurrentAppId = var_objMatch[1];
-          predict();
-        }
-      }
+      _var_strCurrentAppId = extrairAppId(tabs[0].url);
+      if (_var_strCurrentAppId) predict();
     }
   });
 }
 
 /**
- * Carrega a URL da API do chrome.storage.local.
+ * Carrega URLs (API + dashboard) e horizonte do chrome.storage.local.
  */
 function carregarUrlApi() {
-  chrome.storage.local.get(["apiBaseUrl"], (result) => {
+  chrome.storage.local.get(["apiBaseUrl", "dashboardUrl", "horizonte"], (result) => {
     _var_strApiBaseUrl = result.apiBaseUrl || CON_STR_DEFAULT_API_URL;
+    _var_strDashboardUrl = result.dashboardUrl || CON_STR_DEFAULT_DASHBOARD_URL;
     if (elApiUrlInput) {
       elApiUrlInput.value = _var_strApiBaseUrl;
+    }
+    if (elDashboardUrlInput) {
+      elDashboardUrlInput.value = _var_strDashboardUrl;
+    }
+    if (elHorizonSelect && result.horizonte) {
+      elHorizonSelect.value = result.horizonte;
     }
     // Atualiza o link da API Docs no footer
     const elApiLink = document.getElementById("apiLink");
@@ -127,6 +141,7 @@ function carregarUrlApi() {
       elApiLink.href = `${_var_strApiBaseUrl}/docs`;
     }
     checkApiStatus();
+    checkActiveTab();
   });
 }
 
@@ -157,11 +172,40 @@ function salvarUrlApi() {
   });
 }
 
+/**
+ * Salva a URL do dashboard Streamlit no chrome.storage.local.
+ */
+function salvarUrlDashboard() {
+  if (!elDashboardUrlInput) return;
+  const var_strNewUrl = elDashboardUrlInput.value.trim().replace(/\/+$/, "");
+  if (!var_strNewUrl) {
+    showError("URL do dashboard não pode ser vazia");
+    return;
+  }
+
+  chrome.storage.local.set({ dashboardUrl: var_strNewUrl }, () => {
+    _var_strDashboardUrl = var_strNewUrl;
+    if (elSaveDashboardBtn) {
+      elSaveDashboardBtn.textContent = "✅ Salvo!";
+      setTimeout(() => {
+        elSaveDashboardBtn.textContent = "💾 Salvar";
+      }, 1500);
+    }
+  });
+}
+
+function abrirDashboard() {
+  const var_strUrl = (_var_strDashboardUrl || CON_STR_DEFAULT_DASHBOARD_URL).replace(/\/+$/, "");
+  chrome.tabs.create({ url: var_strUrl });
+}
+
 function setupEventListeners() {
-  // Horizon Select
+  // Horizon Select — persiste para o overlay reutilizar
   if (elHorizonSelect) {
     elHorizonSelect.addEventListener("change", () => {
-      if (_var_strCurrentAppId) predict();
+      chrome.storage.local.set({ horizonte: elHorizonSelect.value }, () => {
+        if (_var_strCurrentAppId) predict();
+      });
     });
   }
 
@@ -176,6 +220,32 @@ function setupEventListeners() {
   // Save API URL
   if (elSaveApiBtn) {
     elSaveApiBtn.addEventListener("click", salvarUrlApi);
+  }
+
+  if (elApiUrlInput) {
+    elApiUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        salvarUrlApi();
+      }
+    });
+  }
+
+  if (elSaveDashboardBtn) {
+    elSaveDashboardBtn.addEventListener("click", salvarUrlDashboard);
+  }
+
+  if (elDashboardUrlInput) {
+    elDashboardUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        salvarUrlDashboard();
+      }
+    });
+  }
+
+  if (elOpenDashboardBtn) {
+    elOpenDashboardBtn.addEventListener("click", abrirDashboard);
   }
 }
 

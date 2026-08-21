@@ -34,6 +34,17 @@
       >
       <button id="saveApiBtn" class="btn-save">💾 Salvar</button>
     </div>
+
+    <label class="settings-label" style="margin-top: 10px;" for="dashboardUrlInput">📊 URL do Dashboard Streamlit:</label>
+    <div class="settings-input-group">
+      <input
+        type="url"
+        id="dashboardUrlInput"
+        placeholder="http://localhost:8501"
+        value="http://localhost:8501"
+      >
+      <button id="saveDashboardBtn" class="btn-save">💾 Salvar</button>
+    </div>
     
     <label class="settings-label" style="margin-top: 10px;" for="horizonSelect">⏱️ Horizonte da Previsão:</label>
     <div class="settings-input-group">
@@ -45,7 +56,7 @@
       </select>
     </div>
     
-    <p class="settings-hint">Compatível com Chrome, Opera e Brave</p>
+    <p class="settings-hint">Depois do deploy no Render, cole aqui as URLs HTTPS. Compatível com Chrome, Opera e Brave.</p>
   </div>
 
   <!-- Loading -->
@@ -127,7 +138,9 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <span>Previsor Steam v1.0 • Chrome | Opera | Brave</span>
+    <button type="button" class="footer-dashboard-btn" id="openDashboardBtn" title="Abre o dashboard Streamlit numa nova aba">
+      📊 Abrir dashboard
+    </button>
     <a href="http://localhost:8000/docs" target="_blank" id="apiLink">API Docs</a>
   </footer>
 
