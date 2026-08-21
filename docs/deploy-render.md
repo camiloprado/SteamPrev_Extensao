@@ -11,6 +11,8 @@ Cole a primeira na extensão (⚙️ → URL da API) e a segunda em **URL do Das
 
 O bot Discord **não** entra neste deploy (é um processo contínuo à parte; veja a nota no final).
 
+**Railway ou GitHub para não pagar?** Não resolve. Os `.joblib` (~1,5 GB) e a API always-on **não cabem** no Trial/Free da Railway (teto 0,5–1 GB de RAM e 1 GB de disco) nem no GitHub Pages/Actions. Hobby na Railway também cobra (~$20/mês só de RAM). Detalhes, a conta e a receita mínima (só API): [deploy-railway.md](deploy-railway.md).
+
 ---
 
 ## Antes de começar — leia isto
