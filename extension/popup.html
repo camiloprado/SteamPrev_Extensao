@@ -22,6 +22,41 @@
     </div>
   </header>
 
+  <!-- Verificar API (o Chrome não liga Docker/FastAPI) -->
+  <div class="api-toolbar">
+    <button type="button" class="btn-check-api" id="checkApiBtn" title="Consulta GET /health. Não inicia nenhum processo.">
+      🔌 Verificar / ligar API
+    </button>
+  </div>
+
+  <div class="api-help-panel" id="apiHelpPanel" style="display: none;">
+    <p class="api-help-lead" id="apiHelpLead"></p>
+
+    <ol class="api-help-steps" id="apiHelpStepsLocal">
+      <li>Instalar o <a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noopener">Docker Desktop</a> se ainda não tiver (deixe o app aberto).</li>
+      <li>Clonar ou abrir este repositório (<code>SteamPrev_Extensao</code>) no computador.</li>
+      <li>(Opcional) Na raiz, um ficheiro <code>.env</code> com <code>ITAD_API_KEY</code> se quiser histórico de preços. Sem a chave a API ainda corre, com histórico limitado. Se o Compose exigir <code>.env</code>, copie <code>.env.example</code>.</li>
+      <li>No terminal, <strong>na raiz do projeto</strong>, rode o comando abaixo. Só o serviço <code>api</code> é necessário (o dashboard na porta 8501 é opcional).</li>
+      <li>Esperar o 1.º download dos modelos (~1,5 GB). O <code>/health</code> só fica healthy depois — a primeira vez é lenta.</li>
+      <li>URL da API em ⚙️ = <code>http://localhost:8000</code> (padrão).</li>
+      <li>Recarregar a extensão em <code>chrome://extensions</code> se precisar.</li>
+    </ol>
+
+    <ol class="api-help-steps" id="apiHelpStepsRemote" style="display: none;">
+      <li>A URL em ⚙️ não é localhost — o serviço na nuvem está offline ou a acordar. O Chrome não liga o Docker da sua máquina.</li>
+      <li>Espere 1–2 minutos e clique de novo em <strong>Verificar / ligar API</strong>. No Render Free o contentor dorme aos 15 min; o despertar pode baixar de novo ~1,5 GB de modelos.</li>
+      <li>Confirme a URL HTTPS em ⚙️ (sem barra no final) e teste <strong>Abrir API Docs</strong>.</li>
+      <li>Caminho a $0: mude a URL em ⚙️ para <code>http://localhost:8000</code> e ligue o Docker local com o comando abaixo.</li>
+    </ol>
+
+    <p class="api-help-note" id="apiHelpNote">O overlay na página da Steam só funciona com a API a correr.</p>
+    <pre class="api-help-command" id="apiHelpCommandWrap"><code id="apiHelpCommand">docker compose up -d api</code></pre>
+    <div class="api-help-actions">
+      <button type="button" class="btn-copy-cmd" id="copyCmdBtn">📋 Copiar comando</button>
+      <a href="http://localhost:8000/docs" target="_blank" id="apiHelpDocsLink">Abrir API Docs</a>
+    </div>
+  </div>
+
   <!-- Settings Panel (toggle via JS) -->
   <div class="settings-panel" id="settingsPanel" style="display: none;">
     <label class="settings-label" for="apiUrlInput">🔗 URL da API:</label>

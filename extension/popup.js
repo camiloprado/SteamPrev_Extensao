@@ -8,6 +8,8 @@
 
 const CON_STR_DEFAULT_API_URL = "http://localhost:8000";
 const CON_STR_DEFAULT_DASHBOARD_URL = "http://localhost:8501";
+const CON_STR_DOCKER_UP_CMD = "docker compose up -d api";
+const CON_STR_BTN_CHECK_LABEL = "🔌 Verificar / ligar API";
 
 // Estado global das URLs (carregado do storage)
 let _var_strApiBaseUrl = CON_STR_DEFAULT_API_URL;
@@ -29,6 +31,17 @@ const elSettingsToggle = document.getElementById("settingsToggle");
 const elSettingsPanel = document.getElementById("settingsPanel");
 const elHorizonSelect = document.getElementById("horizonSelect");
 const elThemeToggle = document.getElementById("themeToggle");
+const elCheckApiBtn = document.getElementById("checkApiBtn");
+const elApiHelpPanel = document.getElementById("apiHelpPanel");
+const elApiHelpLead = document.getElementById("apiHelpLead");
+const elApiHelpStepsLocal = document.getElementById("apiHelpStepsLocal");
+const elApiHelpStepsRemote = document.getElementById("apiHelpStepsRemote");
+const elApiHelpNote = document.getElementById("apiHelpNote");
+const elApiHelpCommand = document.getElementById("apiHelpCommand");
+const elCopyCmdBtn = document.getElementById("copyCmdBtn");
+const elApiHelpDocsLink = document.getElementById("apiHelpDocsLink");
+let _var_intBtnFeedbackTimer = null;
+let _var_boolCheckingApi = false;
 
 // ── Init ──
 document.addEventListener("DOMContentLoaded", () => {
@@ -135,11 +148,7 @@ function carregarUrlApi() {
     if (elHorizonSelect && result.horizonte) {
       elHorizonSelect.value = result.horizonte;
     }
-    // Atualiza o link da API Docs no footer
-    const elApiLink = document.getElementById("apiLink");
-    if (elApiLink) {
-      elApiLink.href = `${_var_strApiBaseUrl}/docs`;
-    }
+    atualizarLinksDocs();
     checkApiStatus();
     checkActiveTab();
   });
@@ -157,11 +166,7 @@ function salvarUrlApi() {
 
   chrome.storage.local.set({ apiBaseUrl: var_strNewUrl }, () => {
     _var_strApiBaseUrl = var_strNewUrl;
-    // Atualiza o link da API Docs
-    const elApiLink = document.getElementById("apiLink");
-    if (elApiLink) {
-      elApiLink.href = `${var_strNewUrl}/docs`;
-    }
+    atualizarLinksDocs();
     checkApiStatus();
 
     // Feedback visual
@@ -247,20 +252,168 @@ function setupEventListeners() {
   if (elOpenDashboardBtn) {
     elOpenDashboardBtn.addEventListener("click", abrirDashboard);
   }
+
+  if (elCheckApiBtn) {
+    elCheckApiBtn.addEventListener("click", verificarOuAjudarApi);
+  }
+
+  if (elStatusDot) {
+    elStatusDot.addEventListener("click", verificarOuAjudarApi);
+  }
+
+  if (elCopyCmdBtn) {
+    elCopyCmdBtn.addEventListener("click", copiarComandoApi);
+  }
+
+  if (elApiHelpCommand) {
+    elApiHelpCommand.textContent = CON_STR_DOCKER_UP_CMD;
+  }
+}
+
+function atualizarLinksDocs() {
+  const var_strDocs = `${_var_strApiBaseUrl}/docs`;
+  const elApiLink = document.getElementById("apiLink");
+  if (elApiLink) {
+    elApiLink.href = var_strDocs;
+  }
+  if (elApiHelpDocsLink) {
+    elApiHelpDocsLink.href = var_strDocs;
+  }
+}
+
+/**
+ * localhost / 127.0.0.1 = Docker local. Qualquer outro host = nuvem (Render/Railway/etc).
+ */
+function isApiLocal() {
+  try {
+    const var_objUrl = new URL(_var_strApiBaseUrl);
+    const var_strHost = (var_objUrl.hostname || "").toLowerCase();
+    return var_strHost === "localhost" || var_strHost === "127.0.0.1" || var_strHost === "[::1]" || var_strHost === "::1";
+  } catch {
+    return true;
+  }
 }
 
 // ── API Health Check ──
 async function checkApiStatus() {
   try {
     const var_objResponse = await fetch(`${_var_strApiBaseUrl}/health`, { signal: AbortSignal.timeout(3000) });
+    if (!var_objResponse.ok) throw new Error("unhealthy");
     const var_dictData = await var_objResponse.json();
     elStatusDot.classList.remove("offline");
     elStatusDot.classList.add("online");
     elStatusDot.title = `API Online • ${var_dictData.status}`;
+    return true;
   } catch {
     elStatusDot.classList.remove("online");
     elStatusDot.classList.add("offline");
-    elStatusDot.title = "API Offline";
+    elStatusDot.title = "API Offline — clique para o passo a passo";
+    return false;
+  }
+}
+
+/**
+ * Consulta /health. Se estiver online, confirma no botão.
+ * Se estiver offline, mostra o passo a passo (local vs nuvem) e copia o comando Docker.
+ * O Chrome não inicia FastAPI/Docker — só explica o que fazer no computador.
+ */
+async function verificarOuAjudarApi() {
+  if (!elCheckApiBtn || _var_boolCheckingApi) return;
+  _var_boolCheckingApi = true;
+  elCheckApiBtn.disabled = true;
+  definirFeedbackBotao("⏳ A verificar...", null);
+
+  try {
+    const var_boolOnline = await checkApiStatus();
+
+    if (var_boolOnline) {
+      esconderAjudaApi();
+      definirFeedbackBotao("✅ API online", "is-online");
+      return;
+    }
+
+    const var_boolLocal = isApiLocal();
+    mostrarAjudaApi(var_boolLocal);
+    definirFeedbackBotao("❌ API offline", "is-offline");
+    if (var_boolLocal) {
+      await copiarComandoApi();
+    }
+  } finally {
+    _var_boolCheckingApi = false;
+    elCheckApiBtn.disabled = false;
+  }
+}
+
+function definirFeedbackBotao(arg_strTexto, arg_strClasse) {
+  if (!elCheckApiBtn) return;
+  elCheckApiBtn.textContent = arg_strTexto;
+  elCheckApiBtn.classList.remove("is-online", "is-offline");
+  if (arg_strClasse) elCheckApiBtn.classList.add(arg_strClasse);
+
+  if (_var_intBtnFeedbackTimer) clearTimeout(_var_intBtnFeedbackTimer);
+  _var_intBtnFeedbackTimer = null;
+  if (arg_strClasse === "is-online" || arg_strClasse === "is-offline") {
+    _var_intBtnFeedbackTimer = setTimeout(() => {
+      elCheckApiBtn.textContent = CON_STR_BTN_CHECK_LABEL;
+      elCheckApiBtn.classList.remove("is-online", "is-offline");
+    }, 2000);
+  }
+}
+
+function mostrarAjudaApi(arg_boolLocal) {
+  if (!elApiHelpPanel) return;
+  elApiHelpPanel.style.display = "block";
+
+  if (elApiHelpLead) {
+    elApiHelpLead.textContent = arg_boolLocal
+      ? "O Chrome não liga o Docker. A API local está offline — siga no computador:"
+      : "Serviço na nuvem offline ou a acordar. O Chrome não liga o Docker da sua máquina.";
+  }
+
+  if (elApiHelpStepsLocal) {
+    elApiHelpStepsLocal.style.display = arg_boolLocal ? "block" : "none";
+  }
+  if (elApiHelpStepsRemote) {
+    elApiHelpStepsRemote.style.display = arg_boolLocal ? "none" : "block";
+  }
+  if (elApiHelpNote) {
+    elApiHelpNote.textContent = arg_boolLocal
+      ? "O overlay na página da Steam só funciona com a API a correr. A primeira subida é lenta (~1,5 GB de modelos)."
+      : "O overlay na Steam precisa da API a responder. Se o contentor ainda estiver a baixar os modelos, espere e verifique de novo.";
+  }
+}
+
+function esconderAjudaApi() {
+  if (elApiHelpPanel) elApiHelpPanel.style.display = "none";
+}
+
+async function copiarComandoApi() {
+  const var_strCmd = CON_STR_DOCKER_UP_CMD;
+  let var_boolOk = false;
+  try {
+    await navigator.clipboard.writeText(var_strCmd);
+    var_boolOk = true;
+  } catch {
+    const elTmp = document.createElement("textarea");
+    elTmp.value = var_strCmd;
+    elTmp.setAttribute("readonly", "");
+    elTmp.style.position = "fixed";
+    elTmp.style.left = "-9999px";
+    document.body.appendChild(elTmp);
+    elTmp.select();
+    try {
+      var_boolOk = document.execCommand("copy");
+    } catch {
+      var_boolOk = false;
+    }
+    document.body.removeChild(elTmp);
+  }
+
+  if (elCopyCmdBtn) {
+    elCopyCmdBtn.textContent = var_boolOk ? "✅ Copiado!" : "❌ Falhou copiar";
+    setTimeout(() => {
+      elCopyCmdBtn.textContent = "📋 Copiar comando";
+    }, 1500);
   }
 }
 

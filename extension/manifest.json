@@ -3,7 +3,7 @@
   "name": "Previsor Steam",
   "version": "1.0.0",
   "description": "Previsão de preços de jogos na Steam usando Machine Learning. Compatível com Chrome, Opera e Brave.",
-  "permissions": ["storage", "tabs", "activeTab"],
+  "permissions": ["storage", "tabs", "activeTab", "clipboardWrite"],
   "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*", "https://*/*"],
   "action": {
     "default_popup": "popup.html",

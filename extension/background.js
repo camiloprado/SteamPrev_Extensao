@@ -44,8 +44,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "OPEN_DASHBOARD") {
+    handleOpenDashboard().then(sendResponse);
+    return true;
+  }
+
   return true;
 });
+
+/**
+ * Abre o dashboard Streamlit numa nova aba.
+ * Content scripts não podem usar chrome.tabs.create — o service worker sim.
+ */
+async function handleOpenDashboard() {
+  const var_objStored = await chrome.storage.local.get(["dashboardUrl"]);
+  const var_strUrl = (var_objStored.dashboardUrl || CON_STR_DEFAULT_DASHBOARD_URL).replace(/\/+$/, "");
+  await chrome.tabs.create({ url: var_strUrl });
+  return { ok: true };
+}
 
 /**
  * Consulta a API de previsão a partir do service worker.

@@ -6,7 +6,10 @@
 
 const CON_STR_HOST_ID = "steamprev-overlay-host";
 const CON_STR_APP_ID_RE = /\/app\/(\d+)/;
-const CON_STR_DEFAULT_DASHBOARD_URL = "http://localhost:8501";
+// Aviso compacto: o painel 🔌 completo fica no popup (ícone da barra do navegador).
+const CON_STR_API_NOTICE =
+  "Para ligar ou verificar a API, clique no ícone da extensão na barra superior do navegador.";
+const CON_STR_PILL_API_HINT = "API: ícone da extensão";
 
 let _var_strCurrentAppId = null;
 let _var_strClosedAppId = null;
@@ -81,6 +84,7 @@ function criarHost(arg_strTema) {
         </div>
       </div>
       <div class="sp-body">
+        <div class="sp-api-notice sp-hidden" id="spApiNotice"></div>
         <div class="sp-loading" id="spLoading">
           <div class="sp-spinner"></div>
           <span>Analisando dados...</span>
@@ -97,9 +101,12 @@ function criarHost(arg_strTema) {
   _var_objEls.pillText = _var_objShadow.getElementById("spPillText");
   _var_objEls.pillMeta = _var_objShadow.getElementById("spPillMeta");
   _var_objEls.panel = _var_objShadow.getElementById("spPanel");
+  _var_objEls.apiNotice = _var_objShadow.getElementById("spApiNotice");
   _var_objEls.loading = _var_objShadow.getElementById("spLoading");
   _var_objEls.error = _var_objShadow.getElementById("spError");
   _var_objEls.results = _var_objShadow.getElementById("spResults");
+
+  _var_objEls.apiNotice.textContent = CON_STR_API_NOTICE;
 
   _var_objEls.pill.addEventListener("click", () => definirColapsado(false));
   _var_objShadow.getElementById("spDashboard").addEventListener("click", abrirDashboard);
@@ -194,13 +201,17 @@ function fecharNestaPagina() {
 }
 
 function abrirDashboard() {
-  chrome.storage.local.get(["dashboardUrl"], (result) => {
-    const var_strUrl = (result.dashboardUrl || CON_STR_DEFAULT_DASHBOARD_URL).replace(/\/+$/, "");
-    chrome.tabs.create({ url: var_strUrl });
+  chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD" }, () => {
+    void chrome.runtime.lastError;
   });
 }
 
+function definirAvisoApi(arg_boolVisivel) {
+  _var_objEls.apiNotice.classList.toggle("sp-hidden", !arg_boolVisivel);
+}
+
 function mostrarLoading() {
+  definirAvisoApi(false);
   _var_objEls.loading.classList.remove("sp-hidden");
   _var_objEls.error.classList.add("sp-hidden");
   _var_objEls.results.classList.add("sp-hidden");
@@ -210,11 +221,17 @@ function mostrarLoading() {
 }
 
 function mostrarErro(arg_strMsg) {
+  definirAvisoApi(true);
   _var_objEls.loading.classList.add("sp-hidden");
   _var_objEls.results.classList.add("sp-hidden");
   _var_objEls.error.classList.remove("sp-hidden");
-  _var_objEls.error.textContent = arg_strMsg;
-  _var_objEls.pillText.textContent = "API offline";
+  _var_objEls.error.replaceChildren();
+
+  const elMsg = document.createElement("span");
+  elMsg.textContent = arg_strMsg;
+  _var_objEls.error.appendChild(elMsg);
+
+  _var_objEls.pillText.textContent = CON_STR_PILL_API_HINT;
   _var_objEls.pillMeta.textContent = "";
   _var_objEls.pillIcon.textContent = "⚠️";
 }
@@ -242,6 +259,7 @@ function textoPreco(arg_dictGame) {
 }
 
 function renderizarResultados(arg_dictData) {
+  definirAvisoApi(false);
   _var_objEls.loading.classList.add("sp-hidden");
   _var_objEls.error.classList.add("sp-hidden");
   _var_objEls.results.classList.remove("sp-hidden");
