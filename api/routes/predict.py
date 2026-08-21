@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import asyncio
 import logging
-import time
 
 from api.schemas import (
     GameQueryInput,
@@ -200,8 +199,11 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
     var_listHistorico = await ITADClient.get_price_history(var_intAppid, arg_floatPrecoBase=var_floatPrice)
     
     var_listWarnings = []
-    if time.time() < ITADClient.rate_limit_until:
-        var_listWarnings.append("A API de histórico de preços (ITAD) atingiu o limite de requisições. O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
+    # ITADClient sinaliza por item ("fonte": "mock"/"real") quando cai no fallback
+    # simulado — cobre não só rate limit, mas também ITAD_API_KEY ausente e erros
+    # de rede, que antes não geravam nenhum aviso ao cliente.
+    if var_listHistorico and any(var_dictPonto.get("fonte") == "mock" for var_dictPonto in var_listHistorico):
+        var_listWarnings.append("A API de histórico de preços (ITAD) está indisponível (chave ausente, limite de requisições ou erro de rede). O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
 
     # 4. Features
     var_dfFeatures = gerar_features_para_inferencia(

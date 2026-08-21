@@ -38,43 +38,47 @@ class ITADClient:
         var_listHistorico = []
         var_floatCurrentPrice = arg_floatPrecoBase if arg_floatPrecoBase > 0 else random.uniform(20.0, 200.0)
         var_dtNow = datetime.now()
-        
+
         # Adicionar o primeiro ponto (início do histórico há 3 anos)
         var_listHistorico.append({
             "timestamp": int((var_dtNow - timedelta(days=365*3)).timestamp()),
             "preco": float(var_floatCurrentPrice),
-            "desconto": 0
+            "desconto": 0,
+            "fonte": "mock",
         })
-        
+
         var_intNumPromos = random.randint(5, 15)
         for i in range(var_intNumPromos):
             var_intDaysAgo = random.randint(30, 365 * 3)
             var_dtPromo = var_dtNow - timedelta(days=var_intDaysAgo)
-            
+
             var_intDiscount = random.choice([20, 30, 50, 60, 75, 80])
             var_floatPrecoPromo = var_floatCurrentPrice * (1 - (var_intDiscount / 100.0))
-            
+
             var_listHistorico.append({
                 "timestamp": int(var_dtPromo.timestamp()),
                 "preco": float(var_floatPrecoPromo),
-                "desconto": var_intDiscount
+                "desconto": var_intDiscount,
+                "fonte": "mock",
             })
-            
+
             var_dtEndPromo = var_dtPromo + timedelta(days=random.randint(7, 14))
             var_listHistorico.append({
                 "timestamp": int(var_dtEndPromo.timestamp()),
                 "preco": float(var_floatCurrentPrice),
-                "desconto": 0
+                "desconto": 0,
+                "fonte": "mock",
             })
-            
+
         var_listHistorico.sort(key=lambda x: x["timestamp"])
-        
+
         var_listHistorico.append({
             "timestamp": int(var_dtNow.timestamp()),
             "preco": float(var_floatCurrentPrice),
-            "desconto": 0
+            "desconto": 0,
+            "fonte": "mock",
         })
-        
+
         return var_listHistorico
 
     @staticmethod
@@ -111,7 +115,12 @@ class ITADClient:
         - arg_intAnos (int): Filtrar últimos anos.
 
         Retorna:
-        - list[dict]: Lista de {timestamp, preco, desconto}.
+        - list[dict]: Lista de {timestamp, preco, desconto, fonte}, onde "fonte" é
+          "real" (dados vindos da API ITAD) ou "mock" (fallback gerado localmente,
+          usado quando ITAD_API_KEY está ausente, a API está em rate limit, ou
+          qualquer erro impede a chamada real). Chamadores que exibem esse
+          histórico ao usuário devem checar "fonte" e sinalizar quando os dados
+          forem simulados.
         """
         if not CON_STR_ITAD_API_KEY:
             logger.error("ITAD_API_KEY não está configurado no .env. Impossível buscar histórico ITAD.")
@@ -186,7 +195,8 @@ class ITADClient:
                     var_listHistorico.append({
                         "timestamp": int(var_dtDeal.timestamp()),
                         "preco": float(var_floatPrecoDeal),
-                        "desconto": var_intDesconto
+                        "desconto": var_intDesconto,
+                        "fonte": "real",
                     })
                 
                 _itad_cache[var_strCacheKey] = (var_listHistorico, var_floatNow)
