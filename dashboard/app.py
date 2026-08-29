@@ -103,14 +103,14 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### ⚙️ Configuração da API")
-    api_url = st.text_input(
+    var_strApiUrl = st.text_input(
         "URL da API",
         value=st.session_state.get("api_url", CON_STR_DEFAULT_API_URL),
         help="Endereço da API FastAPI de inferência (API_BASE_URL no Render)",
     )
 
     # Salva no session state para uso nas pages
-    st.session_state["api_url"] = api_url
+    st.session_state["api_url"] = var_strApiUrl
 
     st.divider()
     st.markdown(
@@ -131,9 +131,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Métricas Resumo ──
-col1, col2, col3, col4 = st.columns(4)
+var_objCol1, var_objCol2, var_objCol3, var_objCol4 = st.columns(4)
 
-with col1:
+with var_objCol1:
     st.markdown("""
     <div class="metric-card">
         <h2>🧠</h2>
@@ -141,7 +141,7 @@ with col1:
     </div>
     """, unsafe_allow_html=True)
 
-with col2:
+with var_objCol2:
     st.markdown("""
     <div class="metric-card">
         <h2>18</h2>
@@ -149,7 +149,7 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-with col3:
+with var_objCol3:
     st.markdown("""
     <div class="metric-card">
         <h2>3</h2>
@@ -157,7 +157,7 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-with col4:
+with var_objCol4:
     st.markdown("""
     <div class="metric-card">
         <h2>📊</h2>
@@ -173,39 +173,39 @@ st.subheader("📡 Status do Sistema")
 import httpx
 
 try:
-    with httpx.Client(timeout=5.0) as client:
-        response = client.get(f"{api_url}/health")
-        health = response.json()
+    with httpx.Client(timeout=5.0) as var_objClient:
+        var_objResponse = var_objClient.get(f"{var_strApiUrl}/health")
+        var_dictHealth = var_objResponse.json()
 
-    status = health.get("status", "desconhecido")
-    models = health.get("models", {})
+    var_strStatus = var_dictHealth.get("status", "desconhecido")
+    var_dictModels = var_dictHealth.get("models", {})
 
-    if status == "healthy":
+    if var_strStatus == "healthy":
         st.success("🟢 API Online — Todos os modelos carregados")
-    elif status == "degraded":
+    elif var_strStatus == "degraded":
         st.warning("🟡 API Degradada — Alguns modelos não carregados")
     else:
         st.error("🔴 API com problemas")
 
-    col_s1, col_s2, col_s3 = st.columns(3)
-    with col_s1:
-        st.metric("Classificação", "✅ Ativo" if models.get("classificacao") else "❌ Inativo")
-    with col_s2:
-        st.metric("Regressão", "✅ Ativo" if models.get("regressao_dias") else "❌ Inativo")
-    with col_s3:
-        st.metric("Pipeline", "✅ Ativo" if models.get("pipeline_escalonamento") else "❌ Inativo")
+    var_objColS1, var_objColS2, var_objColS3 = st.columns(3)
+    with var_objColS1:
+        st.metric("Classificação", "✅ Ativo" if var_dictModels.get("classificacao") else "❌ Inativo")
+    with var_objColS2:
+        st.metric("Regressão", "✅ Ativo" if var_dictModels.get("regressao_dias") else "❌ Inativo")
+    with var_objColS3:
+        st.metric("Pipeline", "✅ Ativo" if var_dictModels.get("pipeline_escalonamento") else "❌ Inativo")
 
 except Exception:
-    st.error("🔴 API Offline — Verifique se a API está rodando em " + api_url)
+    st.error("🔴 API Offline — Verifique se a API está rodando em " + var_strApiUrl)
     st.info("💡 Execute: `uvicorn api.main:app --reload` para iniciar a API")
 
 # ── Como Usar ──
 st.divider()
 st.subheader("🚀 Como Usar")
 
-col_u1, col_u2, col_u3 = st.columns(3)
+var_objColU1, var_objColU2, var_objColU3 = st.columns(3)
 
-with col_u1:
+with var_objColU1:
     st.markdown("### 📊 Dashboard")
     st.markdown(
         "Use a página **Previsão** na sidebar para:\n"
@@ -214,7 +214,7 @@ with col_u1:
         "- Ver estimativa de dias até promoção"
     )
 
-with col_u2:
+with var_objColU2:
     st.markdown("### 🤖 Bot Discord")
     st.markdown(
         "Use os slash commands:\n"
@@ -223,7 +223,7 @@ with col_u2:
         "- `/status`"
     )
 
-with col_u3:
+with var_objColU3:
     st.markdown("### 🌐 Extensão Chrome")
     st.markdown(
         "Instale a extensão para:\n"
