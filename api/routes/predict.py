@@ -157,8 +157,8 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
 
     var_strQuery = str(input_data.query).strip()
     if not var_strQuery.isdigit():
-        from core.search import searcher
-        var_intAppidEncontrado = searcher.search_by_name(var_strQuery)
+        from core.search import var_objSearcher
+        var_intAppidEncontrado = var_objSearcher.search_by_name(var_strQuery)
         if not var_intAppidEncontrado:
             raise HTTPException(status_code=404, detail=f"Jogo não encontrado pelo nome: '{var_strQuery}'")
         var_intAppid = var_intAppidEncontrado

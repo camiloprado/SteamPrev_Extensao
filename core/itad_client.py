@@ -82,26 +82,26 @@ class ITADClient:
         return var_listHistorico
 
     @staticmethod
-    async def _get_with_retry(client: httpx.AsyncClient, url: str, params: dict, max_retries: int = 3) -> httpx.Response:
+    async def _get_with_retry(arg_objClient: httpx.AsyncClient, arg_strUrl: str, arg_dictParams: dict, arg_intMaxRetries: int = 3) -> httpx.Response:
         import asyncio
-        for attempt in range(max_retries):
-            response = await client.get(url, params=params)
-            if response.status_code == 429:
+        for var_intAttempt in range(arg_intMaxRetries):
+            var_objResponse = await arg_objClient.get(arg_strUrl, params=arg_dictParams)
+            if var_objResponse.status_code == 429:
                 try:
-                    wait_time = int(response.headers.get("Retry-After", (2 ** attempt) * 2))
+                    var_intWait = int(var_objResponse.headers.get("Retry-After", (2 ** var_intAttempt) * 2))
                 except ValueError:
-                    wait_time = (2 ** attempt) * 2
-                    
-                if wait_time > 10:
-                    ITADClient.rate_limit_until = time.time() + wait_time
-                    logger.error(f"ITAD API limite (429). Tempo de espera ({wait_time}s) é muito longo. Rate limit global ativado.")
-                    return response
-                    
-                logger.warning(f"ITAD API limite (429). Retentando em {wait_time}s (tentativa {attempt+1}/{max_retries})...")
-                await asyncio.sleep(wait_time)
+                    var_intWait = (2 ** var_intAttempt) * 2
+
+                if var_intWait > 10:
+                    ITADClient.rate_limit_until = time.time() + var_intWait
+                    logger.error(f"ITAD API limite (429). Tempo de espera ({var_intWait}s) é muito longo. Rate limit global ativado.")
+                    return var_objResponse
+
+                logger.warning(f"ITAD API limite (429). Retentando em {var_intWait}s (tentativa {var_intAttempt+1}/{arg_intMaxRetries})...")
+                await asyncio.sleep(var_intWait)
                 continue
-            return response
-        return await client.get(url, params=params)
+            return var_objResponse
+        return await arg_objClient.get(arg_strUrl, params=arg_dictParams)
 
     @staticmethod
     async def get_price_history(arg_intAppid: int, arg_floatPrecoBase: float = 0.0, arg_intAnos: int = 5) -> list[dict]:
@@ -147,7 +147,7 @@ class ITADClient:
                 var_objResponseLookup = await ITADClient._get_with_retry(
                     var_objClient,
                     var_strLookupUrl,
-                    params={"key": CON_STR_ITAD_API_KEY, "appid": arg_intAppid}
+                    arg_dictParams={"key": CON_STR_ITAD_API_KEY, "appid": arg_intAppid}
                 )
                 
                 if var_objResponseLookup.status_code != 200:
@@ -164,7 +164,7 @@ class ITADClient:
                 var_objResponseHist = await ITADClient._get_with_retry(
                     var_objClient,
                     CON_STR_ITAD_HISTORY_URL,
-                    params={"key": CON_STR_ITAD_API_KEY, "id": var_strItadId, "shops": 61, "country": "BR"} # 61 = Steam
+                    arg_dictParams={"key": CON_STR_ITAD_API_KEY, "id": var_strItadId, "shops": 61, "country": "BR"} # 61 = Steam
                 )
                 
                 if var_objResponseHist.status_code != 200:

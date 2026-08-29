@@ -54,7 +54,7 @@ class ModelManager:
         # Download automático de modelos ausentes
         try:
             from scripts.download_models import ensure_models
-            ensure_models(models_dir=self._var_pathModels)
+            ensure_models(arg_pathModelsDir=self._var_pathModels)
         except ImportError:
             logger.debug("Módulo download_models não disponível. Usando modelos locais.")
         except Exception as e:
@@ -71,7 +71,7 @@ class ModelManager:
         for var_strHoriz in ["30d", "60d", "90d", "latest"]:
             self.ensure_models_for_horizon(var_strHoriz)
 
-    def ensure_models_for_horizon(self, horizonte: str) -> bool:
+    def ensure_models_for_horizon(self, arg_strHorizonte: str) -> bool:
         """
         Garante que o modelo correspondente ao horizonte está na memória.
         Libera o antigo usando gc.collect() para evitar sobrecarga.
@@ -86,15 +86,15 @@ class ModelManager:
         NÃO usam este lock e podem rodar livremente em paralelo.
         """
         with self._var_lockHorizonte:
-            return self._ensure_models_for_horizon_locked(horizonte)
+            return self._ensure_models_for_horizon_locked(arg_strHorizonte)
 
-    def _ensure_models_for_horizon_locked(self, horizonte: str) -> bool:
+    def _ensure_models_for_horizon_locked(self, arg_strHorizonte: str) -> bool:
         """Implementação real de ensure_models_for_horizon; chamar sempre com o lock adquirido."""
         var_boolReloaded = False
         import gc
 
         # Normaliza: remove sufixo _latest se presente (ex: "30d_latest" → "30d")
-        var_strHorizonte = horizonte.replace("_latest", "") if horizonte != "latest" else horizonte
+        var_strHorizonte = arg_strHorizonte.replace("_latest", "") if arg_strHorizonte != "latest" else arg_strHorizonte
         self._var_strCurrentHorizon = var_strHorizonte
 
         # ── Resolve caminhos com fallback ──
@@ -106,7 +106,7 @@ class ModelManager:
 
         # Fallback: nomenclatura antiga com algoritmo
         if not var_pathClassificacao.exists():
-            var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{horizonte}.joblib"
+            var_pathClassificacao = self._var_pathModels / f"modelo_classificacao_XGBoost_{arg_strHorizonte}.joblib"
 
         # Regressão Dias: tenta PRIMEIRO a nomenclatura atual ("_dias_"), que é a
         # usada pelo scripts/download_models.py e pelo manifest.json (modelos reais,
@@ -127,7 +127,7 @@ class ModelManager:
             )
         # Fallback: nomenclatura legada com nome do algoritmo (horizonte bruto e normalizado)
         if not var_pathRegressao.exists():
-            var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{arg_strHorizonte}.joblib"
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{var_strHorizonte}.joblib"
             

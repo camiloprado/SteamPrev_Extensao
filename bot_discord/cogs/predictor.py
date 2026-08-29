@@ -53,10 +53,10 @@ class PredictorCog(commands.Cog):
             )
             return
 
-        horizonte_value = horizonte.value if horizonte else "latest"
+        var_strHorizonteValue = horizonte.value if horizonte else "latest"
 
         try:
-            var_dictResult = await self._var_objApiClient.predict_game(appid, horizonte_value)
+            var_dictResult = await self._var_objApiClient.predict_game(appid, var_strHorizonteValue)
 
             if var_dictResult is None:
                 await interaction.followup.send(

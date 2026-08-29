@@ -13,7 +13,7 @@ Fluxo:
 Uso:
     # Na inicialização da API (chamado pelo models_loader.py)
     from scripts.download_models import ensure_models
-    ensure_models(models_dir=Path("resources/models"))
+    ensure_models(arg_pathModelsDir=Path("resources/models"))
 
     # Standalone via linha de comando
     python -m scripts.download_models
@@ -184,9 +184,9 @@ def _obter_manifest_local(arg_pathModelsDir: Path) -> dict | None:
 
 
 def ensure_models(
-    models_dir: Path | str | None = None,
-    base_url: str | None = None,
-    force: bool = False,
+    arg_pathModelsDir: Path | str | None = None,
+    arg_strBaseUrl: str | None = None,
+    arg_boolForce: bool = False,
 ) -> bool:
     """
     Garante que todos os modelos necessários estão presentes localmente.
@@ -195,15 +195,15 @@ def ensure_models(
     faz o download automático do GitHub Releases.
 
     Parâmetros:
-    - models_dir (Path | str | None): Diretório local de modelos. Default: resources/models.
-    - base_url (str | None): URL base do GitHub Releases. Default: env MODELS_BASE_URL ou constante.
-    - force (bool): Se True, força re-download mesmo que o arquivo exista.
+    - arg_pathModelsDir (Path | str | None): Diretório local de modelos. Default: resources/models.
+    - arg_strBaseUrl (str | None): URL base do GitHub Releases. Default: env MODELS_BASE_URL ou constante.
+    - arg_boolForce (bool): Se True, força re-download mesmo que o arquivo exista.
 
     Retorna:
     - bool: True se todos os modelos estão disponíveis, False caso contrário.
     """
-    var_pathModelsDir = Path(models_dir) if models_dir else CON_PATH_DEFAULT_MODELS_DIR
-    var_strBaseUrl = base_url or os.getenv("MODELS_BASE_URL", CON_STR_GITHUB_RELEASES_BASE)
+    var_pathModelsDir = Path(arg_pathModelsDir) if arg_pathModelsDir else CON_PATH_DEFAULT_MODELS_DIR
+    var_strBaseUrl = arg_strBaseUrl or os.getenv("MODELS_BASE_URL", CON_STR_GITHUB_RELEASES_BASE)
 
     var_pathModelsDir.mkdir(parents=True, exist_ok=True)
 
@@ -232,7 +232,7 @@ def ensure_models(
         var_pathLocal = var_pathModelsDir / var_strFilename
 
         # Verifica se existe
-        if var_pathLocal.exists() and not force:
+        if var_pathLocal.exists() and not arg_boolForce:
             # Se temos manifest, verifica hash
             if var_strFilename in var_dictModelsInfo:
                 var_strExpectedHash = var_dictModelsInfo[var_strFilename].get("sha256", "")
@@ -295,18 +295,18 @@ def ensure_models(
 
 
 def check_models(
-    models_dir: Path | str | None = None,
+    arg_pathModelsDir: Path | str | None = None,
 ) -> dict:
     """
     Verifica o status dos modelos locais sem fazer download.
 
     Parâmetros:
-    - models_dir (Path | str | None): Diretório local de modelos.
+    - arg_pathModelsDir (Path | str | None): Diretório local de modelos.
 
     Retorna:
     - dict: Status de cada modelo esperado (presente, ausente, hash_ok).
     """
-    var_pathModelsDir = Path(models_dir) if models_dir else CON_PATH_DEFAULT_MODELS_DIR
+    var_pathModelsDir = Path(arg_pathModelsDir) if arg_pathModelsDir else CON_PATH_DEFAULT_MODELS_DIR
     var_dictStatus = {}
 
     for var_strFilename in CON_LIST_EXPECTED_MODELS:
@@ -352,7 +352,7 @@ if __name__ == "__main__":
 
     if var_objArgs.dry_run:
         logger.info("🔍 Modo dry-run: verificando status dos modelos locais...")
-        var_dictStatus = check_models(models_dir=var_objArgs.models_dir)
+        var_dictStatus = check_models(arg_pathModelsDir=var_objArgs.models_dir)
         for var_strFilename, var_dictInfo in var_dictStatus.items():
             var_strIcon = "✅" if var_dictInfo["present"] else "❌"
             var_strSize = (
@@ -362,8 +362,8 @@ if __name__ == "__main__":
             logger.info(f"  {var_strIcon} {var_strFilename} {var_strSize}")
     else:
         var_boolOk = ensure_models(
-            models_dir=var_objArgs.models_dir,
-            base_url=var_objArgs.base_url,
-            force=var_objArgs.force,
+            arg_pathModelsDir=var_objArgs.models_dir,
+            arg_strBaseUrl=var_objArgs.base_url,
+            arg_boolForce=var_objArgs.force,
         )
         sys.exit(0 if var_boolOk else 1)

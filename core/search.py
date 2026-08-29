@@ -7,45 +7,45 @@ logger = logging.getLogger("core.search")
 
 class GameSearcher:
     def __init__(self):
-        self.app_list = []
-        self._loaded = False
+        self._var_listAppList = []
+        self._var_boolLoaded = False
 
     def _load_data(self):
-        if self._loaded:
+        if self._var_boolLoaded:
             return
-            
-        applist_path = os.getenv("STEAM_APPLIST_PATH", "resources/dados/steam_applist.json")
-        try:
-            with open(applist_path, "r", encoding="utf-8") as f:
-                self.app_list = json.load(f)
-            self._loaded = True
-            logger.info(f"Lista de jogos carregada. Total: {len(self.app_list)} jogos.")
-        except Exception as e:
-            logger.error(f"Não foi possível carregar steam_applist.json em {applist_path}: {e}")
 
-    def search_by_name(self, name_query: str) -> Optional[int]:
+        var_strApplistPath = os.getenv("STEAM_APPLIST_PATH", "resources/dados/steam_applist.json")
+        try:
+            with open(var_strApplistPath, "r", encoding="utf-8") as var_fileApplist:
+                self._var_listAppList = json.load(var_fileApplist)
+            self._var_boolLoaded = True
+            logger.info(f"Lista de jogos carregada. Total: {len(self._var_listAppList)} jogos.")
+        except Exception as e:
+            logger.error(f"Não foi possível carregar steam_applist.json em {var_strApplistPath}: {e}")
+
+    def search_by_name(self, arg_strNameQuery: str) -> Optional[int]:
         self._load_data()
-        
-        if not self.app_list:
+
+        if not self._var_listAppList:
             return None
-            
-        query_lower = name_query.lower().strip()
-        
+
+        var_strQueryLower = arg_strNameQuery.lower().strip()
+
         # 1. Tentativa de match exato
-        for game in self.app_list:
-            if game.get("name", "").lower() == query_lower:
-                return game["appid"]
-                
+        for var_dictGame in self._var_listAppList:
+            if var_dictGame.get("name", "").lower() == var_strQueryLower:
+                return var_dictGame["appid"]
+
         # 2. Tentativa de match parcial (começa com)
-        for game in self.app_list:
-            if game.get("name", "").lower().startswith(query_lower):
-                return game["appid"]
+        for var_dictGame in self._var_listAppList:
+            if var_dictGame.get("name", "").lower().startswith(var_strQueryLower):
+                return var_dictGame["appid"]
 
         # 3. Tentativa de substring
-        for game in self.app_list:
-            if query_lower in game.get("name", "").lower():
-                return game["appid"]
-                
+        for var_dictGame in self._var_listAppList:
+            if var_strQueryLower in var_dictGame.get("name", "").lower():
+                return var_dictGame["appid"]
+
         return None
 
-searcher = GameSearcher()
+var_objSearcher = GameSearcher()
