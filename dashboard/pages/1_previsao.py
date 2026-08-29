@@ -14,7 +14,7 @@ st.set_page_config(page_title="Previsão | Previsor Steam", page_icon="📊", la
 st.title("📊 Previsão de Preço")
 st.caption("Busque um jogo por nome ou AppID e veja a previsão de Machine Learning")
 
-api_url = (
+var_strApiUrl = (
     st.session_state.get("api_url")
     or os.getenv("API_BASE_URL", "http://localhost:8000")
 ).rstrip("/")
@@ -23,16 +23,16 @@ api_url = (
 def get_game_catalog():
     import json
     try:
-        with open("resources/dados/steam_applist.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
+        with open("resources/dados/steam_applist.json", "r", encoding="utf-8") as var_fileApplist:
+            var_listData = json.load(var_fileApplist)
         # Ordenar alfabeticamente para facilitar a vida
-        data_sorted = sorted([g for g in data if g.get("name")], key=lambda x: x["name"])
-        return {f"{g['name']} ({g['appid']})": g['appid'] for g in data_sorted}
+        var_listDataSorted = sorted([var_dictG for var_dictG in var_listData if var_dictG.get("name")], key=lambda x: x["name"])
+        return {f"{var_dictG['name']} ({var_dictG['appid']})": var_dictG['appid'] for var_dictG in var_listDataSorted}
     except Exception:
         return {}
 
-game_catalog = get_game_catalog()
-horizonte_opcoes = {
+var_dictGameCatalog = get_game_catalog()
+var_dictHorizonteOpcoes = {
     "latest": "Padrão (Latest)",
     "30d_latest": "30 Dias",
     "60d_latest": "60 Dias",
@@ -40,7 +40,7 @@ horizonte_opcoes = {
 }
 
 # Radio fora do form para trocar o método de busca sem precisar de Enter
-modo_busca = st.radio(
+var_strModoBusca = st.radio(
     "Método de Busca",
     ["Nome (Autocomplete)", "AppID Manual"],
     horizontal=True,
@@ -49,37 +49,37 @@ modo_busca = st.radio(
 
 # ── Formulário de Busca (Enter confirma) ──
 with st.form("previsao_form", clear_on_submit=False):
-    col_search, col_btn = st.columns([4, 1])
+    var_objColSearch, var_objColBtn = st.columns([4, 1])
 
-    with col_search:
-        if "Nome" in modo_busca:
-            game_selected = st.selectbox(
+    with var_objColSearch:
+        if "Nome" in var_strModoBusca:
+            var_strGameSelected = st.selectbox(
                 "🎮 Escolha o Jogo",
-                options=[""] + list(game_catalog.keys()),
+                options=[""] + list(var_dictGameCatalog.keys()),
                 index=0,
                 label_visibility="collapsed",
             )
-            query = str(game_catalog[game_selected]) if game_selected else ""
+            var_strQuery = str(var_dictGameCatalog[var_strGameSelected]) if var_strGameSelected else ""
         else:
-            query = st.text_input(
+            var_strQuery = st.text_input(
                 "🎮 AppID do Jogo",
                 placeholder="Ex: 1245620 — pressione Enter para prever",
                 label_visibility="collapsed",
             )
 
-    with col_btn:
-        horizonte_chave = st.selectbox(
+    with var_objColBtn:
+        var_strHorizonteChave = st.selectbox(
             "Horizonte",
-            options=list(horizonte_opcoes.keys()),
-            format_func=lambda x: horizonte_opcoes[x],
+            options=list(var_dictHorizonteOpcoes.keys()),
+            format_func=lambda x: var_dictHorizonteOpcoes[x],
             label_visibility="collapsed",
         )
-        predict_btn = st.form_submit_button("🔮 Prever", width="stretch", type="primary")
+        var_boolPredictBtn = st.form_submit_button("🔮 Prever", width="stretch", type="primary")
 
 # ── Jogos Populares (atalhos, fora do form) ──
 st.markdown("**Jogos populares:**")
-popular_cols = st.columns(6)
-popular_games = [
+var_listPopularCols = st.columns(6)
+var_listPopularGames = [
     ("Counter-Strike 2", "730"),
     ("ELDEN RING", "1245620"),
     ("Stardew Valley", "413150"),
@@ -88,108 +88,108 @@ popular_games = [
     ("Terraria", "105600"),
 ]
 
-for i, (name, appid) in enumerate(popular_games):
-    with popular_cols[i]:
-        if st.button(name, key=f"pop_{appid}", width="stretch"):
-            query = appid
-            predict_btn = True
+for var_intI, (var_strName, var_strAppid) in enumerate(var_listPopularGames):
+    with var_listPopularCols[var_intI]:
+        if st.button(var_strName, key=f"pop_{var_strAppid}", width="stretch"):
+            var_strQuery = var_strAppid
+            var_boolPredictBtn = True
 
 st.divider()
 
 # ── Resultado da Previsão ──
-if predict_btn and query:
+if var_boolPredictBtn and var_strQuery:
     with st.spinner("🔄 Analisando..."):
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(
-                    f"{api_url}/predict/game",
-                    json={"query": query, "horizonte": horizonte_chave},
+            with httpx.Client(timeout=30.0) as var_objClient:
+                var_objResponse = var_objClient.post(
+                    f"{var_strApiUrl}/predict/game",
+                    json={"query": var_strQuery, "horizonte": var_strHorizonteChave},
                 )
 
-            if response.status_code == 404:
-                st.error(f"❌ Jogo não encontrado ou AppID inválido: **{query}**")
+            if var_objResponse.status_code == 404:
+                st.error(f"❌ Jogo não encontrado ou AppID inválido: **{var_strQuery}**")
                 st.info("💡 Informe estritamente o AppID numérico do jogo.")
 
-            elif response.status_code == 200:
-                data = response.json()
-                game = data.get("game", {})
-                clf = data.get("classificacao")
-                reg = data.get("regressao")
+            elif var_objResponse.status_code == 200:
+                var_dictData = var_objResponse.json()
+                var_dictGame = var_dictData.get("game", {})
+                var_dictClf = var_dictData.get("classificacao")
+                var_dictReg = var_dictData.get("regressao")
 
                 # ── Exibir Avisos da API ──
-                warnings = data.get("warnings")
-                if warnings:
-                    for w in warnings:
-                        st.warning(f"⚠️ {w}")
+                var_listWarnings = var_dictData.get("warnings")
+                if var_listWarnings:
+                    for var_strW in var_listWarnings:
+                        st.warning(f"⚠️ {var_strW}")
 
                 # ── Info do Jogo ──
                 st.markdown("---")
-                col_img, col_info = st.columns([1, 3])
+                var_objColImg, var_objColInfo = st.columns([1, 3])
 
-                with col_img:
-                    header = game.get("header_image")
-                    if header:
-                        st.image(header, width="stretch")
+                with var_objColImg:
+                    var_strHeader = var_dictGame.get("header_image")
+                    if var_strHeader:
+                        st.image(var_strHeader, width="stretch")
 
-                with col_info:
-                    st.markdown(f"## 🎮 {game.get('name', 'Jogo')}")
-                    release_date = game.get("release_date")
-                    if release_date:
-                        st.caption(f"📅 Lançamento: {release_date}")
-                    ci1, ci2, ci3 = st.columns(3)
-                    with ci1:
-                        price = game.get("price", 0)
-                        is_coming_soon = game.get("is_coming_soon", False)
-                        if is_coming_soon:
+                with var_objColInfo:
+                    st.markdown(f"## 🎮 {var_dictGame.get('name', 'Jogo')}")
+                    var_strReleaseDate = var_dictGame.get("release_date")
+                    if var_strReleaseDate:
+                        st.caption(f"📅 Lançamento: {var_strReleaseDate}")
+                    var_objCi1, var_objCi2, var_objCi3 = st.columns(3)
+                    with var_objCi1:
+                        var_floatPrice = var_dictGame.get("price", 0)
+                        var_boolIsComingSoon = var_dictGame.get("is_coming_soon", False)
+                        if var_boolIsComingSoon:
                             st.metric("💰 Preço", "Não Lançado")
                         else:
-                            st.metric("💰 Preço", f"R$ {price:.2f}" if price > 0 else "Gratuito")
-                    with ci2:
-                        st.metric("⭐ Reviews", f"{game.get('review_score', 'N/A')}%")
-                    with ci3:
-                        st.metric("🆔 AppID", game.get("appid", "N/A"))
+                            st.metric("💰 Preço", f"R$ {var_floatPrice:.2f}" if var_floatPrice > 0 else "Gratuito")
+                    with var_objCi2:
+                        st.metric("⭐ Reviews", f"{var_dictGame.get('review_score', 'N/A')}%")
+                    with var_objCi3:
+                        st.metric("🆔 AppID", var_dictGame.get("appid", "N/A"))
 
                 st.markdown("---")
 
-                is_on_sale = game.get("is_on_sale", False)
-                if is_on_sale:
-                    discount = game.get("discount_percent", 0)
-                    sale_end = game.get("sale_end_date")
-                    msg = f"Este jogo já se encontra em promoção com **{discount}% de desconto**!"
-                    if sale_end:
-                        msg += f" Término estimado: {sale_end}."
-                    st.success(f"🎉 {msg}")
+                var_boolIsOnSale = var_dictGame.get("is_on_sale", False)
+                if var_boolIsOnSale:
+                    var_intDiscount = var_dictGame.get("discount_percent", 0)
+                    var_strSaleEnd = var_dictGame.get("sale_end_date")
+                    var_strMsg = f"Este jogo já se encontra em promoção com **{var_intDiscount}% de desconto**!"
+                    if var_strSaleEnd:
+                        var_strMsg += f" Término estimado: {var_strSaleEnd}."
+                    st.success(f"🎉 {var_strMsg}")
                     st.info("💡 A predição não é necessária para jogos que já estão com oferta ativa.")
                 else:
                     # ── Resultados ──
-                    col_clf, col_reg = st.columns(2)
+                    var_objColClf, var_objColReg = st.columns(2)
 
                     # Classificação
-                    with col_clf:
+                    with var_objColClf:
                         st.subheader("📊 Direção do Preço")
-                        if clf:
+                        if var_dictClf:
                             # Classe principal
-                            classe_emoji = clf.get("classe_emoji", clf.get("classe", "?"))
-                            confianca = clf.get("confianca", 0)
+                            var_strClasseEmoji = var_dictClf.get("classe_emoji", var_dictClf.get("classe", "?"))
+                            var_floatConfianca = var_dictClf.get("confianca", 0)
 
-                            st.markdown(f"### {classe_emoji}")
-                            st.markdown(f"**Confiança:** {confianca:.1%}")
+                            st.markdown(f"### {var_strClasseEmoji}")
+                            st.markdown(f"**Confiança:** {var_floatConfianca:.1%}")
 
                             # Gráfico de probabilidades
-                            probas = clf.get("probabilidades", {})
-                            if probas:
-                                colors = {"cai": "#2ed573", "mantem": "#ffa502", "sobe": "#ff4757"}
+                            var_dictProbas = var_dictClf.get("probabilidades", {})
+                            if var_dictProbas:
+                                var_dictColors = {"cai": "#2ed573", "mantem": "#ffa502", "sobe": "#ff4757"}
 
-                                fig = go.Figure(data=[
+                                var_objFig = go.Figure(data=[
                                     go.Bar(
-                                        x=list(probas.keys()),
-                                        y=list(probas.values()),
-                                        marker_color=[colors.get(k, "#5352ed") for k in probas.keys()],
-                                        text=[f"{v:.1%}" for v in probas.values()],
+                                        x=list(var_dictProbas.keys()),
+                                        y=list(var_dictProbas.values()),
+                                        marker_color=[var_dictColors.get(var_strK, "#5352ed") for var_strK in var_dictProbas.keys()],
+                                        text=[f"{var_floatV:.1%}" for var_floatV in var_dictProbas.values()],
                                         textposition="outside",
                                     )
                                 ])
-                                fig.update_layout(
+                                var_objFig.update_layout(
                                     title="Probabilidades por Classe",
                                     yaxis_title="Probabilidade",
                                     yaxis_range=[0, 1],
@@ -197,18 +197,18 @@ if predict_btn and query:
                                     height=350,
                                     margin=dict(t=50, b=30),
                                 )
-                                st.plotly_chart(fig, width="stretch")
+                                st.plotly_chart(var_objFig, width="stretch")
                         else:
                             st.warning("Modelo de classificação não disponível")
 
                     # Regressão
-                    with col_reg:
+                    with var_objColReg:
                         st.subheader("⏳ Próxima Promoção")
-                        if reg:
-                            dias = reg.get("dias_estimados", 0)
-                            descricao = reg.get("descricao", "")
+                        if var_dictReg:
+                            var_intDias = var_dictReg.get("dias_estimados", 0)
+                            var_strDescricao = var_dictReg.get("descricao", "")
 
-                            var_strHorizonteNorm = horizonte_chave.replace("_latest", "") if horizonte_chave != "latest" else "latest"
+                            var_strHorizonteNorm = var_strHorizonteChave.replace("_latest", "") if var_strHorizonteChave != "latest" else "latest"
                             var_intCapGauge = 60 if var_strHorizonteNorm == "60d" else (90 if var_strHorizonteNorm == "90d" else 30)
                             var_listPassosGauge = [
                                 {"range": [0, min(30, var_intCapGauge)], "color": "rgba(46, 213, 115, 0.3)"},
@@ -219,9 +219,9 @@ if predict_btn and query:
                                 )
 
                             # Gauge chart
-                            fig_gauge = go.Figure(go.Indicator(
+                            var_objFigGauge = go.Figure(go.Indicator(
                                 mode="gauge+number+delta",
-                                value=min(dias, var_intCapGauge),
+                                value=min(var_intDias, var_intCapGauge),
                                 title={"text": "Dias estimados", "font": {"size": 16}},
                                 number={"suffix": " dias", "font": {"size": 36}},
                                 gauge={
@@ -232,49 +232,49 @@ if predict_btn and query:
                                     "threshold": {
                                         "line": {"color": "white", "width": 2},
                                         "thickness": 0.8,
-                                        "value": min(dias, var_intCapGauge),
+                                        "value": min(var_intDias, var_intCapGauge),
                                     },
                                 },
                             ))
-                            fig_gauge.update_layout(
+                            var_objFigGauge.update_layout(
                                 template="plotly_dark",
                                 height=350,
                                 margin=dict(t=60, b=30),
                             )
-                            st.plotly_chart(fig_gauge, width="stretch")
-                            st.info(descricao)
-                            
+                            st.plotly_chart(var_objFigGauge, width="stretch")
+                            st.info(var_strDescricao)
+
                             # Exibir Desconto Previsto
-                            desconto = reg.get("desconto_previsto_pct", 0)
-                            margem = reg.get("desconto_margem_erro", 0.0)
-                            preco_est = reg.get("preco_estimado", 0.0)
-                            if desconto > 0:
-                                st.success(f"🏷️ Desconto Previsto: **{desconto}% (± {margem}%)** (Estimativa: R$ {preco_est:.2f})")
+                            var_intDesconto = var_dictReg.get("desconto_previsto_pct", 0)
+                            var_floatMargem = var_dictReg.get("desconto_margem_erro", 0.0)
+                            var_floatPrecoEst = var_dictReg.get("preco_estimado", 0.0)
+                            if var_intDesconto > 0:
+                                st.success(f"🏷️ Desconto Previsto: **{var_intDesconto}% (± {var_floatMargem}%)** (Estimativa: R$ {var_floatPrecoEst:.2f})")
                             else:
                                 st.warning("📉 Modelo preditor de desconto ausente nos arquivos base.")
                         else:
                             st.warning("Modelo de regressão não disponível")
 
                 # ── Features utilizadas ──
-                if not is_on_sale:
-                    features = data.get("features_utilizadas")
-                    if features:
+                if not var_boolIsOnSale:
+                    var_dictFeatures = var_dictData.get("features_utilizadas")
+                    if var_dictFeatures:
                         with st.expander("🔬 Features utilizadas na predição"):
-                            feat_cols = st.columns(3)
-                            for i, (key, val) in enumerate(features.items()):
-                                with feat_cols[i % 3]:
-                                    if isinstance(val, float):
-                                        st.metric(key, f"{val:.4f}")
+                            var_listFeatCols = st.columns(3)
+                            for var_intI, (var_strKey, var_anyVal) in enumerate(var_dictFeatures.items()):
+                                with var_listFeatCols[var_intI % 3]:
+                                    if isinstance(var_anyVal, float):
+                                        st.metric(var_strKey, f"{var_anyVal:.4f}")
                                     else:
-                                        st.metric(key, str(val))
+                                        st.metric(var_strKey, str(var_anyVal))
             else:
-                st.error(f"Erro na API: {response.status_code}")
+                st.error(f"Erro na API: {var_objResponse.status_code}")
 
         except httpx.ConnectError:
             st.error("🔴 Não foi possível conectar à API")
-            st.info(f"Verifique se a API está rodando em **{api_url}**")
+            st.info(f"Verifique se a API está rodando em **{var_strApiUrl}**")
         except Exception as e:
             st.error(f"Erro: {str(e)}")
 
-elif predict_btn:
+elif var_boolPredictBtn:
     st.warning("Digite o nome de um jogo ou AppID para buscar")
