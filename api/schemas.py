@@ -13,9 +13,15 @@ class GameQueryInput(BaseModel):
         description="AppID numérico do jogo ou nome (busca por nome exato, prefixo ou substring).",
         examples=["730", "1245620", "Counter-Strike"],
     )
-    horizonte: Literal["30d", "60d", "90d", "latest"] = Field(
+    horizonte: Literal[
+        "30d", "60d", "90d", "latest",
+        "30d_latest", "60d_latest", "90d_latest",
+    ] = Field(
         default="30d",
-        description="Horizonte da previsão: '30d', '60d', '90d' ou 'latest' (melhor geral)",
+        description=(
+            "Horizonte da previsão: '30d', '60d', '90d', 'latest' (melhor geral) "
+            "ou as variantes com sufixo '_latest' enviadas pelo dashboard/bot/extensão."
+        ),
     )
 
 

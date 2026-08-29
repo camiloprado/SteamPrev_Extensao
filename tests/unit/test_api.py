@@ -61,6 +61,16 @@ class TestPredict:
         )
         assert var_objResponse.status_code == 422
 
+    @pytest.mark.parametrize("horizonte", ["30d_latest", "60d_latest", "90d_latest"])
+    def test_predict_accepts_client_horizonte_suffix(self, client, horizonte):
+        # Dashboard, bot Discord e extensão Chrome enviam o horizonte com sufixo
+        # "_latest" (ex: "30d_latest"). O schema precisa aceitar esse formato,
+        # que o ModelManager já normaliza internamente (models_loader.py).
+        var_objResponse = client.post(
+            "/predict/game", json={"query": "1245620", "horizonte": horizonte}
+        )
+        assert var_objResponse.status_code == 200
+
     def test_predict_by_appid(self, client):
         var_objResponse = client.post("/predict/game", json={"query": "1245620"})
         assert var_objResponse.status_code == 200
