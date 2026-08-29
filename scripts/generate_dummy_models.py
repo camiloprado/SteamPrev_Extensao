@@ -1,17 +1,18 @@
 """
 Script para gerar modelos dummy para desenvolvimento e testes.
-Treina modelos XGBoost simples com dados sintéticos e exporta como .joblib.
+Treina modelos XGBoost simples com dados sintéticos e exporta como .joblib
+com a nomenclatura padronizada da Fábrica.
 
 Uso:
     python scripts/generate_dummy_models.py
 """
 
+import shutil
 import numpy as np
 import pandas as pd
 import joblib
 import xgboost as xgb
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
 from pathlib import Path
 
 
@@ -36,6 +37,9 @@ CON_LIST_FEATURE_COLUMNS = [
     "dia_do_ano",
     "dias_para_proxima_grande_promo",
 ]
+
+CON_LIST_HORIZONTES = ["30d", "60d", "90d"]
+CON_DICT_CAP_DIAS = {"30d": 30, "60d": 60, "90d": 90}
 
 
 def gerar_dados_sinteticos(arg_intNumSamples: int = 5000) -> pd.DataFrame:
@@ -73,8 +77,6 @@ def gerar_dados_sinteticos(arg_intNumSamples: int = 5000) -> pd.DataFrame:
 
     var_dfDados = pd.DataFrame(var_dictData)
 
-    # Alvo classificação: lógica simples baseada em features
-    # Mais promoções + perto de sale sazonal → mais chance de "cai"
     var_serScore = (
         var_dfDados["frequencia_descontos_por_ano"] * 0.3
         - var_dfDados["dias_para_proxima_grande_promo"] * 0.01
@@ -84,74 +86,97 @@ def gerar_dados_sinteticos(arg_intNumSamples: int = 5000) -> pd.DataFrame:
     )
     var_dfDados["alvo_classificacao"] = pd.cut(var_serScore, bins=3, labels=[0, 1, 2]).astype(int)
 
-    # Alvo regressão: dias até próximo desconto
-    var_dfDados["alvo_regressao"] = np.clip(
+    var_serDiasBruto = (
         var_dfDados["dias_desde_ultimo_desconto"] * 0.3
         + var_dfDados["dias_para_proxima_grande_promo"] * 0.5
         - var_dfDados["frequencia_descontos_por_ano"] * 5
-        + np.random.normal(0, 20, arg_intNumSamples),
-        0, 365
-    ).astype(int)
+        + np.random.normal(0, 20, arg_intNumSamples)
+    )
+    for var_strHorizonte, var_intCap in CON_DICT_CAP_DIAS.items():
+        var_dfDados[f"alvo_regressao_dias_{var_strHorizonte}"] = np.clip(
+            var_serDiasBruto, 0, var_intCap
+        ).astype(int)
+
+    var_dfDados["alvo_regressao_desconto"] = np.clip(
+        var_dfDados["desconto_medio_janela"] * 0.6
+        + var_dfDados["desconto_max_janela"] * 0.3
+        + np.random.normal(0, 5, arg_intNumSamples),
+        0, 100
+    )
 
     return var_dfDados
 
 
 def main():
-    """Gera e salva os modelos dummy."""
+    """Gera e salva os modelos dummy com nomenclatura padronizada."""
     var_pathOutputDir = Path(__file__).resolve().parents[1] / "resources" / "models"
     var_pathOutputDir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("🏭 Gerando Modelos Dummy para Previsor Steam")
+    print("Gerando Modelos Dummy para Previsor Steam")
     print("=" * 60)
 
-    # Gera dados
     var_dfDados = gerar_dados_sinteticos(5000)
     var_dfX = var_dfDados[CON_LIST_FEATURE_COLUMNS]
     var_serYClassificacao = var_dfDados["alvo_classificacao"]
-    var_serYRegressao = var_dfDados["alvo_regressao"]
+    var_serYDesconto = var_dfDados["alvo_regressao_desconto"]
 
-    print(f"✅ Dados gerados: {len(var_dfDados)} amostras, {len(CON_LIST_FEATURE_COLUMNS)} features")
+    print(f"Dados gerados: {len(var_dfDados)} amostras, {len(CON_LIST_FEATURE_COLUMNS)} features")
 
-    # ── Classificação XGBoost ──
-    print("\n📊 Treinando modelo de classificação (XGBoost)...")
+    print("\nTreinando modelo de classificacao (XGBoost)...")
     var_objClassificador = xgb.XGBClassifier(
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
         random_state=42,
-        use_label_encoder=False,
         eval_metric="mlogloss",
     )
     var_objClassificador.fit(var_dfX, var_serYClassificacao)
-    var_pathClassificacao = var_pathOutputDir / "modelo_classificacao_XGBoost_latest.joblib"
-    joblib.dump(var_objClassificador, var_pathClassificacao)
-    print(f"   ✅ Salvo: {var_pathClassificacao}")
 
-    # ── Regressão XGBoost ──
-    print("\n📈 Treinando modelo de regressão (XGBoost)...")
-    var_objRegressor = xgb.XGBRegressor(
+    print("\nTreinando modelo de regressao de desconto (XGBoost)...")
+    var_objRegressorDesconto = xgb.XGBRegressor(
         n_estimators=100,
         max_depth=6,
         learning_rate=0.1,
         random_state=42,
     )
-    var_objRegressor.fit(var_dfX, var_serYRegressao)
-    var_pathRegressao = var_pathOutputDir / "modelo_regressao_XGBoost_latest.joblib"
-    joblib.dump(var_objRegressor, var_pathRegressao)
-    print(f"   ✅ Salvo: {var_pathRegressao}")
+    var_objRegressorDesconto.fit(var_dfX, var_serYDesconto)
 
-    # ── Pipeline de escalonamento ──
-    print("\n⚙️ Gerando pipeline de escalonamento...")
+    for var_strHorizonte in CON_LIST_HORIZONTES:
+        var_pathClassificacao = var_pathOutputDir / f"modelo_classificacao_{var_strHorizonte}.joblib"
+        joblib.dump(var_objClassificador, var_pathClassificacao)
+        print(f"   Salvo: {var_pathClassificacao.name}")
+
+        print(f"\nTreinando regressao de dias ({var_strHorizonte})...")
+        var_objRegressorDias = xgb.XGBRegressor(
+            n_estimators=100,
+            max_depth=6,
+            learning_rate=0.1,
+            random_state=42,
+        )
+        var_objRegressorDias.fit(var_dfX, var_dfDados[f"alvo_regressao_dias_{var_strHorizonte}"])
+        var_pathRegressaoDias = var_pathOutputDir / f"modelo_regressao_dias_{var_strHorizonte}.joblib"
+        joblib.dump(var_objRegressorDias, var_pathRegressaoDias)
+        print(f"   Salvo: {var_pathRegressaoDias.name}")
+
+        var_pathRegressaoDesconto = var_pathOutputDir / f"modelo_regressao_desconto_{var_strHorizonte}.joblib"
+        joblib.dump(var_objRegressorDesconto, var_pathRegressaoDesconto)
+        print(f"   Salvo: {var_pathRegressaoDesconto.name}")
+
+    var_pathLatest = var_pathOutputDir / "modelo_latest.joblib"
+    shutil.copy2(var_pathOutputDir / "modelo_classificacao_30d.joblib", var_pathLatest)
+    print(f"   Alias: {var_pathLatest.name} -> modelo_classificacao_30d.joblib")
+
+    print("\nGerando pipeline de escalonamento...")
     var_objScaler = StandardScaler()
     var_objScaler.fit(var_dfX)
     var_pathPipeline = var_pathOutputDir / "pipeline_escalonamento.joblib"
     joblib.dump(var_objScaler, var_pathPipeline)
-    print(f"   ✅ Salvo: {var_pathPipeline}")
+    print(f"   Salvo: {var_pathPipeline.name}")
 
     print("\n" + "=" * 60)
-    print("✅ Todos os modelos dummy foram gerados com sucesso!")
-    print(f"   Diretório: {var_pathOutputDir}")
+    print("Todos os modelos dummy foram gerados com sucesso!")
+    print(f"   Diretorio: {var_pathOutputDir}")
     print("=" * 60)
 
 

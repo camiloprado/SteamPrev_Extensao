@@ -41,15 +41,16 @@ graph TD
 O microserviço de backend deve expor as seguintes rotas:
 
 * `GET /health`
-  * Verifica se a API está online e se os modelos `.joblib` foram carregados corretamente.
-* `POST /predict/classificacao`
-  * **Objetivo**: Prevê a direção do preço ("sobe", "cai", "mantém") em um horizonte (ex: 30 dias).
-  * **Payload esperado**: JSON contendo as features numéricas/categóricas do jogo (ex: preço atual, descontos anteriores, dias desde a última sale, sazonalidade).
-  * **Resposta**: Classe predita e as probabilidades para cada classe.
-* `POST /predict/regressao`
-  * **Objetivo**: Prevê o tempo contínuo ("Faltam X dias para a próxima promoção").
-  * **Payload esperado**: JSON com as features.
-  * **Resposta**: Número inteiro (dias).
+  * Verifica se a API está online e se os modelos `.joblib` foram carregados (`classificacao`, `regressao_dias`, `regressao_desconto`).
+* `POST /predict/game`
+  * **Objetivo**: Predição completa a partir do AppID ou nome do jogo.
+  * **Payload**: `{ "query": "730", "horizonte": "latest" }` — horizontes `30d`, `60d`, `90d` ou `latest` (cap 30 dias).
+  * **Fluxo interno**: Steam Store API (`appdetails` + `appreviews`) + ITAD v2 (`games/lookup/v1` + `games/history/v2`) → 18 features → classificação + regressão de dias + regressão de desconto.
+  * **Resposta**: `game`, `classificacao`, `regressao` (dias, desconto previsto, MAE, preço estimado). `features_utilizadas` só com `?debug=true`.
+* `POST /predict/classificacao` e `POST /predict/regressao`
+  * Modo avançado: recebe as 18 features já calculadas (`GameFeaturesInput`).
+* `GET /docs` / `GET /redoc`
+  * OpenAPI gerado pelo FastAPI.
 
 ## 5. Fluxo de Dados (Input / Output)
 

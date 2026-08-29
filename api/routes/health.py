@@ -18,7 +18,11 @@ async def health_check(request: Request):
     var_objModelManager = request.app.state.model_manager
     var_dictModelosStatus = var_objModelManager.get_status()
 
-    var_strStatus = "healthy" if var_dictModelosStatus["classificacao"] or var_dictModelosStatus["regressao_dias"] else "degraded"
+    var_boolTemClassificacao = bool(var_dictModelosStatus.get("classificacao"))
+    var_boolTemRegressao = bool(
+        var_dictModelosStatus.get("regressao_dias") or var_dictModelosStatus.get("regressao")
+    )
+    var_strStatus = "healthy" if var_boolTemClassificacao or var_boolTemRegressao else "degraded"
     if not var_dictModelosStatus["loaded"]:
         var_strStatus = "unhealthy"
 

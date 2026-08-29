@@ -208,25 +208,31 @@ if predict_btn and query:
                             dias = reg.get("dias_estimados", 0)
                             descricao = reg.get("descricao", "")
 
+                            var_strHorizonteNorm = horizonte_chave.replace("_latest", "") if horizonte_chave != "latest" else "latest"
+                            var_intCapGauge = 60 if var_strHorizonteNorm == "60d" else (90 if var_strHorizonteNorm == "90d" else 30)
+                            var_listPassosGauge = [
+                                {"range": [0, min(30, var_intCapGauge)], "color": "rgba(46, 213, 115, 0.3)"},
+                            ]
+                            if var_intCapGauge > 30:
+                                var_listPassosGauge.append(
+                                    {"range": [30, var_intCapGauge], "color": "rgba(255, 165, 2, 0.3)"}
+                                )
+
                             # Gauge chart
                             fig_gauge = go.Figure(go.Indicator(
                                 mode="gauge+number+delta",
-                                value=dias,
+                                value=min(dias, var_intCapGauge),
                                 title={"text": "Dias estimados", "font": {"size": 16}},
                                 number={"suffix": " dias", "font": {"size": 36}},
                                 gauge={
-                                    "axis": {"range": [0, 365], "tickwidth": 1},
+                                    "axis": {"range": [0, var_intCapGauge], "tickwidth": 1},
                                     "bar": {"color": "#5352ed"},
                                     "bgcolor": "rgba(0,0,0,0)",
-                                    "steps": [
-                                        {"range": [0, 30], "color": "rgba(46, 213, 115, 0.3)"},
-                                        {"range": [30, 90], "color": "rgba(255, 165, 2, 0.3)"},
-                                        {"range": [90, 365], "color": "rgba(255, 71, 87, 0.3)"},
-                                    ],
+                                    "steps": var_listPassosGauge,
                                     "threshold": {
                                         "line": {"color": "white", "width": 2},
                                         "thickness": 0.8,
-                                        "value": dias,
+                                        "value": min(dias, var_intCapGauge),
                                     },
                                 },
                             ))

@@ -6,11 +6,17 @@ Responsável por buscar os dados reais de jogos na Steam via HTTP.
 import logging
 import httpx
 import time
+import asyncio
 from datetime import datetime
 
 logger = logging.getLogger("core.steam_client")
 
 CON_STR_STEAM_API_URL = "https://store.steampowered.com/api/appdetails"
+CON_STR_STEAM_REVIEWS_URL = "https://store.steampowered.com/appreviews/{appid}"
+CON_DICT_DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+}
 
 _steam_cache = {}
 CON_INT_CACHE_TTL = 300  # 5 minutos
@@ -22,6 +28,30 @@ class SteamClient:
     """
 
     @staticmethod
+    async def _get_with_retry(
+        arg_objClient: httpx.AsyncClient,
+        arg_strUrl: str,
+        arg_dictParams: dict,
+        arg_intMaxRetries: int = 3,
+    ) -> httpx.Response:
+        """GET com retry curto em 429 (Retry-After limitado a 10s)."""
+        for var_intAttempt in range(arg_intMaxRetries):
+            var_objResponse = await arg_objClient.get(arg_strUrl, params=arg_dictParams)
+            if var_objResponse.status_code != 429:
+                return var_objResponse
+            try:
+                var_intWait = int(var_objResponse.headers.get("Retry-After", (2 ** var_intAttempt) * 2))
+            except ValueError:
+                var_intWait = (2 ** var_intAttempt) * 2
+            var_intWait = min(var_intWait, 10)
+            logger.warning(
+                f"Steam API limite (429). Retentando em {var_intWait}s "
+                f"(tentativa {var_intAttempt + 1}/{arg_intMaxRetries})..."
+            )
+            await asyncio.sleep(var_intWait)
+        return await arg_objClient.get(arg_strUrl, params=arg_dictParams)
+
+    @staticmethod
     async def get_game_data(arg_intAppid: int) -> dict | None:
         """
         Obtém dados de um jogo pelo AppID chamando a Steam Store API.
@@ -29,7 +59,6 @@ class SteamClient:
         Parâmetros:
         - arg_intAppid (int): AppID do jogo na Steam.
 
-        Retorna:
         Retorna:
         - dict | None: Dados do jogo parseados ou None se falhar.
         """
@@ -41,10 +70,11 @@ class SteamClient:
                 return var_dictCachedData
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as var_objClient:
-                var_objResponse = await var_objClient.get(
+            async with httpx.AsyncClient(timeout=10.0, headers=CON_DICT_DEFAULT_HEADERS) as var_objClient:
+                var_objResponse = await SteamClient._get_with_retry(
+                    var_objClient,
                     CON_STR_STEAM_API_URL,
-                    params={"appids": str(arg_intAppid), "cc": "br"}
+                    {"appids": str(arg_intAppid), "cc": "br", "l": "brazilian"},
                 )
                 var_objResponse.raise_for_status()
                 var_dictJson = var_objResponse.json()
@@ -84,9 +114,10 @@ class SteamClient:
                 var_intReviewScore = 0
                 var_intTotalReviews = 1000
                 try:
-                    var_objRevResp = await var_objClient.get(
-                        f"https://store.steampowered.com/appreviews/{arg_intAppid}",
-                        params={"json": "1", "language": "all", "num_per_page": "0"}
+                    var_objRevResp = await SteamClient._get_with_retry(
+                        var_objClient,
+                        CON_STR_STEAM_REVIEWS_URL.format(appid=arg_intAppid),
+                        {"json": "1", "language": "all", "num_per_page": "0"},
                     )
                     if var_objRevResp.status_code == 200:
                         var_dictRevData = var_objRevResp.json()

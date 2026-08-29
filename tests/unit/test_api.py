@@ -67,6 +67,24 @@ class TestPredict:
         var_dictData = var_objResponse.json()
         assert var_dictData["game"]["appid"] == 1245620
 
+    def test_predict_latest_returns_regressao(self, client):
+        var_dictHealth = client.get("/health").json()
+        if not var_dictHealth.get("models", {}).get("regressao_dias"):
+            pytest.skip("Modelos de regressão não carregados")
+        var_objResponse = client.post(
+            "/predict/game",
+            json={"query": "1245620", "horizonte": "latest"},
+        )
+        assert var_objResponse.status_code == 200
+        var_dictData = var_objResponse.json()
+        if var_dictData["game"].get("is_on_sale"):
+            pytest.skip("Jogo em promoção — predição abortada por early return")
+        var_dictRegressao = var_dictData.get("regressao")
+        assert var_dictRegressao is not None
+        assert var_dictRegressao["dias_estimados"] >= 0
+        assert "desconto_previsto_pct" in var_dictRegressao
+        assert "preco_estimado" in var_dictRegressao
+
     def test_predict_free_game(self, client):
         var_objResponse = client.post("/predict/game", json={"query": "730"})
         assert var_objResponse.status_code == 200
@@ -94,6 +112,8 @@ class TestPredict:
         var_dictData = var_objResponse.json()
         if var_dictData.get("regressao"):
             assert var_dictData["regressao"]["dias_estimados"] >= 0
+            assert "desconto_previsto_pct" in var_dictData["regressao"]
+            assert "preco_estimado" in var_dictData["regressao"]
 
 
 class TestModelRoutingRegression:

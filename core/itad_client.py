@@ -106,13 +106,13 @@ class ITADClient:
     @staticmethod
     async def get_price_history(arg_intAppid: int, arg_floatPrecoBase: float = 0.0, arg_intAnos: int = 5) -> list[dict]:
         """
-        Busca o histórico de preços real de um jogo via ITAD API.
-        Usa o ITAD_API_KEY do .env. Se não configurado, gera erro ou lista vazia.
+        Busca o histórico de preços real de um jogo via ITAD API v2.
+        Requer ITAD_API_KEY no .env. Sem chave, ou em 429, usa histórico simulado.
 
         Parâmetros:
         - arg_intAppid (int): AppID Steam.
-        - arg_floatPrecoBase (float): (Usado no mock antigo, ignorado aqui).
-        - arg_intAnos (int): Filtrar últimos anos.
+        - arg_floatPrecoBase (float): Preço de catálogo para calcular o percentual de desconto.
+        - arg_intAnos (int): Filtrar os últimos N anos (padrão 5, paridade com a Fábrica).
 
         Retorna:
         - list[dict]: Lista de {timestamp, preco, desconto, fonte}, onde "fonte" é
@@ -130,7 +130,7 @@ class ITADClient:
         if var_floatNow < ITADClient.rate_limit_until:
             logger.warning(f"ITAD API bloqueada temporariamente (429). Tempo restante: {int(ITADClient.rate_limit_until - var_floatNow)}s")
             return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
-        var_strCacheKey = f"{arg_intAppid}_{arg_floatPrecoBase}"
+        var_strCacheKey = f"{arg_intAppid}_{arg_floatPrecoBase}_{arg_intAnos}"
         if var_strCacheKey in _itad_cache:
             var_listCachedData, var_floatTimestamp = _itad_cache[var_strCacheKey]
             if var_floatNow - var_floatTimestamp < CON_INT_CACHE_TTL:
@@ -138,15 +138,11 @@ class ITADClient:
                 return var_listCachedData
 
         try:
-            # Precisamos resolver o appid da steam para o plain/id do ITAD primeiro.
-            # Mas a API v2 suporta busca direta por loja/appid dependendo do endpoint.
-            # Vamos simplificar para o propósito do teste de integração da extensão:
-            # O endpoint oficial v2 para steam precisa do id ITAD, mas /lookup/id/shop/appid existe.
-            # Para não complicar a extensão que só tem 1 chamada, e porque os dados vêm da API:
-            
-            # 1. Lookup ID via Steam AppID
+            # 1. Lookup ITAD id a partir do Steam AppID (games/lookup/v1)
             var_strLookupUrl = "https://api.isthereanydeal.com/games/lookup/v1"
-            var_dictHeaders = {"User-Agent": "SteamPrev-Extensao/1.0"}
+            var_dictHeaders = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            }
             async with httpx.AsyncClient(timeout=10.0, headers=var_dictHeaders) as var_objClient:
                 var_objResponseLookup = await ITADClient._get_with_retry(
                     var_objClient,
@@ -198,7 +194,14 @@ class ITADClient:
                         "desconto": var_intDesconto,
                         "fonte": "real",
                     })
-                
+
+                var_intTimestampLimite = int(var_floatNow) - int(arg_intAnos) * 365 * 86400
+                var_listHistorico = [
+                    var_dictPonto for var_dictPonto in var_listHistorico
+                    if var_dictPonto["timestamp"] >= var_intTimestampLimite
+                ]
+                var_listHistorico.sort(key=lambda x: x["timestamp"])
+
                 _itad_cache[var_strCacheKey] = (var_listHistorico, var_floatNow)
                 return var_listHistorico
 

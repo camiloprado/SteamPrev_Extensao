@@ -47,8 +47,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Previsor Steam — API de Inferência",
     description=(
-        "API para previsão de direção de preço e tempo até promoção de jogos na Steam. "
-        "Consome modelos .joblib treinados pelo projeto base (Fábrica/ETL)."
+        "API para previsão de direção de preço, dias até promoção e percentual de desconto. "
+        "Consome modelos .joblib treinados pela Fábrica (ETL). Horizontes: 30d, 60d, 90d e latest. "
+        "Dados ao vivo: Steam Store API e IsThereAnyDeal v2."
     ),
     version="1.0.0",
     lifespan=lifespan,

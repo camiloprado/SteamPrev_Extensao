@@ -4,6 +4,7 @@ Carrega na inicialização e suporta hot-reload via timestamp do arquivo.
 """
 
 import joblib
+import json
 import logging
 import threading
 from pathlib import Path
@@ -28,6 +29,12 @@ class ModelManager:
         
         self._var_boolLoaded = False
         self._var_strCurrentHorizon = "latest"
+
+        # Cache do manifest.json em memória — evita reabrir/reparsear o
+        # arquivo a cada requisição de predição. Invalidado por mtime,
+        # no mesmo padrão de hot-reload já usado para os modelos .joblib.
+        self._var_dictManifestCache = None
+        self._var_floatManifestMtime = 0.0
 
         # Protege a troca/carregamento de modelos (dicts de cache + horizonte atual)
         # contra condições de corrida quando requisições concorrentes rodam
@@ -115,13 +122,14 @@ class ModelManager:
 
         # Fallback: nomenclatura legada (sem "_dias_")
         if not var_pathRegressao.exists():
-            if var_strHorizonte == "latest":
-                var_pathRegressao = self._var_pathModels / "modelo_regressao_30d.joblib"
-            else:
-                var_pathRegressao = self._var_pathModels / f"modelo_regressao_{var_strHorizonte}.joblib"
-        # Fallback: nomenclatura legada com nome do algoritmo
+            var_pathRegressao = self._var_pathModels / (
+                f"modelo_regressao_{'30d' if var_strHorizonte == 'latest' else var_strHorizonte}.joblib"
+            )
+        # Fallback: nomenclatura legada com nome do algoritmo (horizonte bruto e normalizado)
         if not var_pathRegressao.exists():
             var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{horizonte}.joblib"
+        if not var_pathRegressao.exists():
+            var_pathRegressao = self._var_pathModels / f"modelo_regressao_XGBoost_{var_strHorizonte}.joblib"
             
         # Regressão Desconto:
         if var_strHorizonte == "latest":
@@ -216,3 +224,25 @@ class ModelManager:
             "pipeline_escalonamento": self._var_objPipelineEscalonamento is not None,
             "models_path": str(self._var_pathModels),
         }
+
+    @property
+    def manifest(self) -> dict:
+        """
+        Retorna o manifest.json em memória, recarregando apenas se o arquivo
+        no disco tiver mudado (mtime) desde a última leitura.
+        """
+        var_pathManifest = self._var_pathModels / "manifest.json"
+        if not var_pathManifest.exists():
+            return {}
+
+        var_floatMtime = var_pathManifest.stat().st_mtime
+        if self._var_dictManifestCache is None or var_floatMtime > self._var_floatManifestMtime:
+            try:
+                with open(var_pathManifest, "r", encoding="utf-8") as f:
+                    self._var_dictManifestCache = json.load(f)
+                self._var_floatManifestMtime = var_floatMtime
+            except Exception as e:
+                logger.warning(f"Falha ao carregar manifest.json: {e}")
+                return self._var_dictManifestCache or {}
+
+        return self._var_dictManifestCache

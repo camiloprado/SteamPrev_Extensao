@@ -59,6 +59,27 @@ class TestFeatureEngineering:
         assert var_dfResult.iloc[0]["review_score"] == 90.0
         assert var_dfResult.iloc[0]["num_promocoes_janela"] >= 1
 
+    def test_dias_no_preco_atual_cap_janela_5_anos(self):
+        import time
+        from core.feature_engineering import CON_INT_ANOS_EFETIVOS
+
+        var_intNow = int(time.time())
+        var_intDiasDentroDaJanela = CON_INT_ANOS_EFETIVOS * 365 - 10
+        var_listHistorico = [
+            {"timestamp": var_intNow - 86400 * 365 * 8, "preco": 59.99, "desconto": 0},
+            {"timestamp": var_intNow - 86400 * var_intDiasDentroDaJanela, "preco": 59.99, "desconto": 0},
+            {"timestamp": var_intNow - 86400, "preco": 59.99, "desconto": 0},
+        ]
+        var_dfResult = gerar_features_para_inferencia(
+            arg_floatReviewScore=90.0,
+            arg_floatPrecoCatalogo=59.99,
+            arg_listHistoricoPrecos=var_listHistorico,
+        )
+        var_intDias = int(var_dfResult.iloc[0]["dias_no_preco_atual"])
+        assert var_intDias <= CON_INT_ANOS_EFETIVOS * 365
+        assert var_intDias < 365 * 8
+        assert var_intDias >= var_intDiasDentroDaJanela - 2
+
     def test_feature_columns_order(self):
         assert len(CON_LIST_FEATURE_COLUMNS) == 18
         assert CON_LIST_FEATURE_COLUMNS[0] == "review_score"

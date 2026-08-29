@@ -29,6 +29,19 @@ logger = logging.getLogger("api.predict")
 router = APIRouter(tags=["Prediction"])
 
 
+def _obter_cap_dias_horizonte(arg_strHorizonte: str) -> int:
+    """
+    Teto de dias alinhado ao contrato de exportação (30/60/90).
+    O horizonte 'latest' reutiliza o modelo de 30 dias.
+    """
+    var_strNorm = (arg_strHorizonte or "latest").replace("_latest", "")
+    if var_strNorm == "60d":
+        return 60
+    if var_strNorm == "90d":
+        return 90
+    return 30
+
+
 def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tuple:
     """
     Executa classificação e regressão nos features fornecidos.
@@ -76,7 +89,9 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
         try:
             var_floatPredicao = arg_objModelManager.regressao_model.predict(arg_dfFeatures)[0]
             var_intDias = max(0, int(round(float(var_floatPredicao))))
-            var_intDias = min(var_intDias, 365)  # Cap em 365 dias
+            var_strHorizonteAtual = getattr(arg_objModelManager, "_var_strCurrentHorizon", "latest")
+            var_intCapDias = _obter_cap_dias_horizonte(var_strHorizonteAtual)
+            var_intDias = min(var_intDias, var_intCapDias)
 
             if var_intDias <= 7:
                 var_strDescricao = f"🔥 Promoção iminente! Estimativa: {var_intDias} dias"
@@ -96,17 +111,15 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
                 try:
                     var_floatDesconto = arg_objModelManager.regressao_desconto_model.predict(arg_dfFeatures)[0]
                     var_intDesconto = max(0, min(100, int(round(float(var_floatDesconto)))))
-                    
-                    import json
+
                     try:
-                        manifest_path = arg_objModelManager._var_pathModels / "manifest.json"
-                        if manifest_path.exists():
-                            with open(manifest_path, "r", encoding="utf-8") as f:
-                                manifest_data = json.load(f)
-                                horizon = arg_objModelManager._var_strCurrentHorizon
-                                model_key = f"modelo_regressao_desconto_{horizon}.joblib"
-                                if model_key in manifest_data.get("models", {}):
-                                    var_floatDescontoMargemErro = manifest_data["models"][model_key]["metrics"].get("mae", 6.6)
+                        manifest_data = arg_objModelManager.manifest
+                        var_strHorizonteManifest = arg_objModelManager._var_strCurrentHorizon
+                        if var_strHorizonteManifest == "latest":
+                            var_strHorizonteManifest = "30d"
+                        model_key = f"modelo_regressao_desconto_{var_strHorizonteManifest}.joblib"
+                        if model_key in manifest_data.get("models", {}):
+                            var_floatDescontoMargemErro = manifest_data["models"][model_key]["metrics"].get("mae", 6.6)
                     except Exception:
                         pass
                     
@@ -131,14 +144,14 @@ def _executar_predicao(arg_objModelManager, arg_dfFeatures: pd.DataFrame) -> tup
 @router.post("/predict/game", response_model=PredictionResponse)
 async def predict_by_game(input_data: GameQueryInput, request: Request, debug: bool = False):
     """
-    Faz predição completa (classificação + regressão) a partir do nome ou AppID do jogo.
+    Faz predição completa (classificação + regressão + desconto) a partir do nome ou AppID.
 
     Fluxo:
-    1. Busca o jogo pelo nome ou AppID
-    2. Obtém dados do jogo (Steam mock)
-    3. Obtém histórico de preços (ITAD mock)
-    4. Gera features
-    5. Executa predição
+    1. Resolve o jogo pelo nome (busca local) ou AppID
+    2. Obtém dados ao vivo na Steam Store API (`appdetails` + `appreviews`)
+    3. Obtém histórico de preços na ITAD API v2 (`games/lookup/v1` + `games/history/v2`)
+    4. Gera as 18 features na mesma ordem do treino
+    5. Executa classificação, regressão de dias (cap 30/60/90) e regressão de desconto
     """
     var_objModelManager = request.app.state.model_manager
 
