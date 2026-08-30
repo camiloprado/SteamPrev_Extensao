@@ -3,7 +3,8 @@ Sincroniza modelos .joblib da Fábrica para a Extensão.
 
 Copia o conteúdo de resources/models/export/ (Fábrica) para
 resources/models/ (Extensão) após validar o manifest.json e, quando
-presente, o SHA-256 de cada arquivo.
+presente, o SHA-256 de cada arquivo. O steam_applist.json do mesmo
+manifest vai para resources/dados/ em vez de resources/models/.
 
 Uso:
     python scripts/sync_models.py
@@ -31,6 +32,9 @@ CON_PATH_DEFAULT_SOURCE = Path(
     )
 )
 CON_PATH_DEFAULT_DEST = Path(__file__).resolve().parents[1] / "resources" / "models"
+
+# Catálogo de busca por nome: vem no mesmo manifest, mas o destino é resources/dados/, não resources/models/.
+CON_STR_APPLIST_FILENAME = "steam_applist.json"
 
 
 def _calcular_sha256(arg_pathArquivo: Path) -> str:
@@ -108,7 +112,10 @@ def sync_models(
     var_intCopied = 0
     var_intSkipped = 0
 
-    var_listArquivos = list(var_dictManifest["models"].keys())
+    var_listArquivos = [
+        var_strNome for var_strNome in var_dictManifest["models"].keys()
+        if var_strNome != CON_STR_APPLIST_FILENAME
+    ]
     if "manifest.json" not in var_listArquivos:
         var_listArquivos.append("manifest.json")
 
@@ -142,6 +149,28 @@ def sync_models(
         shutil.copy2(var_pathOrigem, var_pathDestino)
         logger.info(f"Copiado: {var_strFilename}")
         var_intCopied += 1
+
+    # steam_applist.json vai para resources/dados/, irmã de resources/models/ (var_pathDest).
+    if CON_STR_APPLIST_FILENAME in var_dictManifest["models"]:
+        var_pathOrigemApplist = var_pathSource / CON_STR_APPLIST_FILENAME
+        var_pathDestApplist = var_pathDest.parent / "dados" / CON_STR_APPLIST_FILENAME
+
+        if not var_pathOrigemApplist.exists():
+            logger.error(f"Ausente na origem: {CON_STR_APPLIST_FILENAME}")
+            var_boolAllOk = False
+        else:
+            var_strExpectedHash = var_dictManifest["models"][CON_STR_APPLIST_FILENAME].get("sha256", "")
+            if var_strExpectedHash and _calcular_sha256(var_pathOrigemApplist) != var_strExpectedHash:
+                logger.error(f"SHA-256 inválido para {CON_STR_APPLIST_FILENAME}")
+                var_boolAllOk = False
+            elif arg_boolDryRun:
+                logger.info(f"[dry-run] Copiaria {CON_STR_APPLIST_FILENAME} para {var_pathDestApplist}")
+                var_intSkipped += 1
+            else:
+                var_pathDestApplist.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(var_pathOrigemApplist, var_pathDestApplist)
+                logger.info(f"Copiado: {CON_STR_APPLIST_FILENAME} -> {var_pathDestApplist}")
+                var_intCopied += 1
 
     logger.info("-" * 50)
     if arg_boolDryRun:

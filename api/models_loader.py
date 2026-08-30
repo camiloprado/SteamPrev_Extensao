@@ -53,8 +53,9 @@ class ModelManager:
 
         # Download automático de modelos ausentes
         try:
-            from scripts.download_models import ensure_models
+            from scripts.download_models import ensure_models, ensure_applist
             ensure_models(arg_pathModelsDir=self._var_pathModels)
+            ensure_applist()
         except ImportError:
             logger.debug("Módulo download_models não disponível. Usando modelos locais.")
         except Exception as e:

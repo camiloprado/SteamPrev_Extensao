@@ -39,6 +39,10 @@ CON_STR_GITHUB_RELEASES_BASE = (
 
 # Diretório de destino padrão (relativo ao projeto)
 CON_PATH_DEFAULT_MODELS_DIR = Path(__file__).resolve().parents[1] / "resources" / "models"
+CON_PATH_DEFAULT_DADOS_DIR = Path(__file__).resolve().parents[1] / "resources" / "dados"
+
+# Catálogo de nomes/appids (busca por nome) publicado pela Fábrica junto do manifest dos modelos.
+CON_STR_APPLIST_FILENAME = "steam_applist.json"
 
 # Lista de modelos esperados para download
 CON_LIST_EXPECTED_MODELS = [
@@ -216,10 +220,12 @@ def ensure_models(
     # 1. Buscar manifest remoto
     var_dictManifest = _obter_manifest_remoto(var_strBaseUrl, var_pathModelsDir)
 
-    # 2. Determinar quais modelos verificar/baixar
+    # 2. Determinar quais modelos verificar/baixar (steam_applist.json tem destino
+    # próprio via ensure_applist() e não pertence a resources/models/).
     var_dictModelsInfo = var_dictManifest.get("models", {}) if var_dictManifest else {}
     var_listModelsToCheck = (
-        list(var_dictModelsInfo.keys()) if var_dictModelsInfo
+        [var_strNome for var_strNome in var_dictModelsInfo.keys() if var_strNome != CON_STR_APPLIST_FILENAME]
+        if var_dictModelsInfo
         else CON_LIST_EXPECTED_MODELS
     )
 
@@ -294,6 +300,60 @@ def ensure_models(
     return var_boolAllOk
 
 
+def ensure_applist(
+    arg_pathDadosDir: Path | str | None = None,
+    arg_strBaseUrl: str | None = None,
+    arg_boolForce: bool = False,
+) -> bool:
+    """
+    Garante que o steam_applist.json (catálogo de busca por nome) está atualizado
+    localmente. Mesma lógica de manifest/SHA-256 de ensure_models(), mas com
+    destino em resources/dados/ em vez de resources/models/.
+
+    Parâmetros:
+    - arg_pathDadosDir (Path | str | None): Diretório local de dados. Default: resources/dados.
+    - arg_strBaseUrl (str | None): URL base do GitHub Releases. Default: env MODELS_BASE_URL ou constante.
+    - arg_boolForce (bool): Se True, força re-download mesmo que o arquivo exista.
+
+    Retorna:
+    - bool: True se o applist está disponível e íntegro, False caso contrário.
+    """
+    var_pathDadosDir = Path(arg_pathDadosDir) if arg_pathDadosDir else CON_PATH_DEFAULT_DADOS_DIR
+    var_strBaseUrl = arg_strBaseUrl or os.getenv("MODELS_BASE_URL", CON_STR_GITHUB_RELEASES_BASE)
+
+    var_pathDadosDir.mkdir(parents=True, exist_ok=True)
+    var_pathLocal = var_pathDadosDir / CON_STR_APPLIST_FILENAME
+
+    var_dictManifest = _obter_manifest_remoto(var_strBaseUrl, var_pathDadosDir)
+    var_dictInfo = var_dictManifest.get("models", {}).get(CON_STR_APPLIST_FILENAME) if var_dictManifest else None
+
+    if var_pathLocal.exists() and not arg_boolForce:
+        if not var_dictInfo:
+            logger.debug(f"✅ {CON_STR_APPLIST_FILENAME} — existe (sem entrada no manifest).")
+            return True
+        var_strExpectedHash = var_dictInfo.get("sha256", "")
+        if var_strExpectedHash and _calcular_sha256(var_pathLocal) == var_strExpectedHash:
+            logger.debug(f"✅ {CON_STR_APPLIST_FILENAME} — hash confere.")
+            return True
+        logger.info(f"🔄 {CON_STR_APPLIST_FILENAME} — hash diferente, re-downloading...")
+
+    if not var_dictInfo:
+        logger.warning(f"{CON_STR_APPLIST_FILENAME} não encontrado no manifest remoto.")
+        return var_pathLocal.exists()
+
+    var_strUrl = f"{var_strBaseUrl}/{CON_STR_APPLIST_FILENAME}"
+    if not _download_arquivo(var_strUrl, var_pathLocal):
+        return False
+
+    var_strExpectedHash = var_dictInfo.get("sha256", "")
+    if var_strExpectedHash and _calcular_sha256(var_pathLocal) != var_strExpectedHash:
+        logger.error(f"❌ Hash mismatch para {CON_STR_APPLIST_FILENAME}!")
+        return False
+
+    logger.info(f"🔒 {CON_STR_APPLIST_FILENAME} — integridade verificada (SHA-256).")
+    return True
+
+
 def check_models(
     arg_pathModelsDir: Path | str | None = None,
 ) -> dict:
@@ -366,4 +426,8 @@ if __name__ == "__main__":
             arg_strBaseUrl=var_objArgs.base_url,
             arg_boolForce=var_objArgs.force,
         )
+        var_boolOk = ensure_applist(
+            arg_strBaseUrl=var_objArgs.base_url,
+            arg_boolForce=var_objArgs.force,
+        ) and var_boolOk
         sys.exit(0 if var_boolOk else 1)

@@ -32,6 +32,7 @@ Thumbs.db
 # Models (binary, large files)
 *.joblib
 resources/models/manifest.json
+resources/dados/manifest.json
 
 # Logs
 *.log
