@@ -20,7 +20,7 @@ from pathlib import Path
 CON_LIST_FEATURE_COLUMNS = [
     "review_score",
     "preco_catalogo",
-    "preco_atual_hist",
+    "preco_zscore_janela",
     "preco_media_janela",
     "preco_std_janela",
     "preco_min_janela",
@@ -57,7 +57,7 @@ def gerar_dados_sinteticos(arg_intNumSamples: int = 5000) -> pd.DataFrame:
     var_dictData = {
         "review_score": np.random.uniform(30, 100, arg_intNumSamples),
         "preco_catalogo": np.random.uniform(10, 300, arg_intNumSamples),
-        "preco_atual_hist": np.random.uniform(10, 300, arg_intNumSamples),
+        "preco_zscore_janela": np.random.normal(0, 1, arg_intNumSamples),
         "preco_media_janela": np.random.uniform(10, 250, arg_intNumSamples),
         "preco_std_janela": np.random.uniform(0, 50, arg_intNumSamples),
         "preco_min_janela": np.random.uniform(5, 150, arg_intNumSamples),

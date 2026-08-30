@@ -29,7 +29,7 @@ class GameFeaturesInput(BaseModel):
     """Input manual de features para predição direta (modo avançado)."""
     review_score: float = Field(default=0.0, ge=0, le=100, description="Score de reviews (0-100)")
     preco_catalogo: float = Field(default=0.0, ge=0, description="Preço atual no catálogo (BRL)")
-    preco_atual_hist: float = Field(default=0.0, ge=0, description="Preço atual no histórico")
+    preco_zscore_janela: float = Field(default=0.0, description="Quão atípico o preço atual é vs. a média da janela (desvios padrão)")
     preco_media_janela: float = Field(default=0.0, ge=0, description="Preço médio na janela")
     preco_std_janela: float = Field(default=0.0, ge=0, description="Desvio padrão na janela")
     preco_min_janela: float = Field(default=0.0, ge=0, description="Preço mínimo na janela")

@@ -4,7 +4,7 @@ Replica a lógica de geração de features do projeto base (NormalizarModelos)
 para uso em tempo real na API de inferência.
 
 Features reais (18 features, na ordem esperada pelo modelo):
-    review_score, preco_catalogo, preco_atual_hist,
+    review_score, preco_catalogo, preco_zscore_janela,
     preco_media_janela, preco_std_janela, preco_min_janela, preco_max_janela,
     frequencia_descontos_por_ano, dias_no_preco_atual, ratio_preco_atual_vs_minimo,
     desconto_medio_janela, desconto_max_janela, num_promocoes_janela,
@@ -31,7 +31,7 @@ CON_INT_ANOS_EFETIVOS: int = CON_INT_JANELA_ANOS * 2 if CON_BOOL_JANELA_EXTENDID
 CON_LIST_FEATURE_COLUMNS = [
     "review_score",
     "preco_catalogo",
-    "preco_atual_hist",
+    "preco_zscore_janela",
     "preco_media_janela",
     "preco_std_janela",
     "preco_min_janela",
@@ -110,7 +110,7 @@ def gerar_features_para_inferencia(
         var_dictFeatures = {
             "review_score": float(arg_floatReviewScore) if arg_floatReviewScore else 0.0,
             "preco_catalogo": float(arg_floatPrecoCatalogo) if arg_floatPrecoCatalogo else 0.0,
-            "preco_atual_hist": float(arg_floatPrecoCatalogo) if arg_floatPrecoCatalogo else 0.0,
+            "preco_zscore_janela": 0.0,
             "preco_media_janela": float(arg_floatPrecoCatalogo) if arg_floatPrecoCatalogo else 0.0,
             "preco_std_janela": 0.0,
             "preco_min_janela": float(arg_floatPrecoCatalogo) if arg_floatPrecoCatalogo else 0.0,
@@ -186,12 +186,18 @@ def gerar_features_para_inferencia(
     var_floatPrecoMin = float(np.min(var_listPrecosJanela))
     var_floatRatioVsMin = var_floatPrecoAtual / var_floatPrecoMin if var_floatPrecoMin > 0 else 1.0
 
+    # Quão atípico o preço atual é frente à própria janela do jogo (escala relativa,
+    # não sofre com o drift de preço absoluto do catálogo ao longo do tempo).
+    var_floatMediaJanela = float(np.mean(var_listPrecosJanela))
+    var_floatStdJanela = float(np.std(var_listPrecosJanela))
+    var_floatZscorePreco = (var_floatPrecoAtual - var_floatMediaJanela) / var_floatStdJanela if var_floatStdJanela > 0 else 0.0
+
     var_dictFeatures = {
         "review_score": float(arg_floatReviewScore) if arg_floatReviewScore else 0.0,
         "preco_catalogo": float(arg_floatPrecoCatalogo) if arg_floatPrecoCatalogo else 0.0,
-        "preco_atual_hist": float(var_floatPrecoAtual),
-        "preco_media_janela": float(np.mean(var_listPrecosJanela)),
-        "preco_std_janela": float(np.std(var_listPrecosJanela)),
+        "preco_zscore_janela": float(var_floatZscorePreco),
+        "preco_media_janela": var_floatMediaJanela,
+        "preco_std_janela": var_floatStdJanela,
         "preco_min_janela": float(var_floatPrecoMin),
         "preco_max_janela": float(np.max(var_listPrecosJanela)),
         "frequencia_descontos_por_ano": float(var_floatFreqDescontosAno),
