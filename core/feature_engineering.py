@@ -53,8 +53,9 @@ CON_LIST_FEATURE_COLUMNS = [
 CON_DICT_LABEL_MAP_CLASSIFICACAO = {0: "cai", 1: "mantem", 2: "sobe"}
 CON_DICT_LABEL_MAP_CLASSIFICACAO_EMOJI = {0: "📉 Cai", 1: "➡️ Mantém", 2: "📈 Sobe"}
 
-# Datas fixas das grandes promoções Steam (Day of Year)
-CON_LIST_GRANDES_PROMOCOES_DOY = [75, 177, 327, 355]  # Spring, Summer, Autumn, Winter
+# Mediana empírica (2022-2025) derivada do histórico real de descontos na Fábrica —
+# substitui a suposição de datas fixas, que divergia até 28 dias no slot de Outono.
+CON_LIST_GRANDES_PROMOCOES_DOY = [67, 174, 299, 348]  # Spring, Summer, Autumn, Winter
 
 
 def calcular_dias_proxima_grande_promo(arg_intDiaDoAno: int) -> int:
@@ -72,9 +73,9 @@ def calcular_dias_proxima_grande_promo(arg_intDiaDoAno: int) -> int:
         if var_intDiaPromo >= arg_intDiaDoAno:
             var_intDiasProx = min(var_intDiasProx, var_intDiaPromo - arg_intDiaDoAno)
 
-    # Se passou de todas, próxima é Spring do ano que vem
+    # Se passou de todas, próxima é a primeira do ano que vem
     if var_intDiasProx == 999:
-        var_intDiasProx = (365 - arg_intDiaDoAno) + 75
+        var_intDiasProx = (365 - arg_intDiaDoAno) + min(CON_LIST_GRANDES_PROMOCOES_DOY)
 
     return var_intDiasProx
 
