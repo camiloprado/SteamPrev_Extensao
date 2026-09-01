@@ -534,6 +534,17 @@ function showResults(arg_dictData) {
     } else {
       document.getElementById("saleDesc").textContent = "A predição é abortada para jogos que já se encontram em promoção.";
     }
+
+    const elSaleHistorico = document.getElementById("saleHistorico");
+    const var_dictHistoricoDesconto = arg_dictData.historico_desconto;
+    if (var_dictHistoricoDesconto) {
+      elSaleHistorico.textContent = var_dictHistoricoDesconto.eh_maior_historico
+        ? `🏆 Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
+        : `📊 Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+      elSaleHistorico.style.display = "block";
+    } else {
+      elSaleHistorico.style.display = "none";
+    }
     return; // Early return visual
   } else {
     elSaleCard.style.display = "none";
@@ -552,24 +563,25 @@ function showResults(arg_dictData) {
     document.getElementById("confidenceBar").style.width = `${var_intPct}%`;
     document.getElementById("confidenceValue").textContent = `${var_intPct}%`;
 
-    // Probabilities
+    // Probabilities — chips compactos numa linha só (em vez de 3 barras empilhadas)
     const elProbContainer = document.getElementById("probabilities");
-    elProbContainer.innerHTML = "";
+    elProbContainer.replaceChildren();
 
-    const var_dictProbColors = { cai: "cai", mantem: "mantem", sobe: "sobe" };
+    const var_dictProbIcons = { cai: "📉", mantem: "➡️", sobe: "📈" };
 
     if (var_dictClassificacao.probabilidades) {
       Object.entries(var_dictClassificacao.probabilidades).forEach(([var_strLabel, var_floatProb]) => {
         const var_intPctProb = Math.round(var_floatProb * 100);
-        elProbContainer.innerHTML += `
-          <div class="prob-row">
-            <span class="prob-label">${var_strLabel}</span>
-            <div class="prob-bar-container">
-              <div class="prob-bar ${var_dictProbColors[var_strLabel] || ''}" style="width: ${var_intPctProb}%"></div>
-            </div>
-            <span class="prob-value">${var_intPctProb}%</span>
-          </div>
-        `;
+        const elChip = document.createElement("span");
+        elChip.className = `prob-chip ${var_strLabel}`;
+        const elIcon = document.createElement("span");
+        elIcon.className = "prob-icon";
+        elIcon.textContent = var_dictProbIcons[var_strLabel] || "•";
+        const elValue = document.createElement("span");
+        elValue.textContent = `${var_intPctProb}%`;
+        elChip.appendChild(elIcon);
+        elChip.appendChild(elValue);
+        elProbContainer.appendChild(elChip);
       });
     }
   } else {

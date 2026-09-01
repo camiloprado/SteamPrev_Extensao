@@ -107,7 +107,7 @@
       <img id="gameImage" class="game-image" src="" alt="">
       <div class="game-info">
         <h2 id="gameName">—</h2>
-        <p id="gameRelease" style="margin: 2px 0 5px 0; font-size: 0.8rem; color: #a4b0be;"></p>
+        <p id="gameRelease" style="margin: 1px 0 3px 0; font-size: 0.75rem; color: #a4b0be;"></p>
         <div class="game-meta">
           <span class="badge" id="gamePrice">—</span>
           <span class="badge badge-outline" id="gameReview">—</span>
@@ -123,6 +123,7 @@
       </div>
       <div class="prediction-value days" id="saleValue" style="color: #2ed573; font-size: 1.2rem;">—</div>
       <div class="prediction-desc" id="saleDesc" style="color: #a4b0be; margin-top: 5px;">A predição é abortada para jogos que já se encontram em promoção.</div>
+      <div class="prediction-desc" id="saleHistorico" style="color: #a4b0be; margin-top: 5px; display: none;"></div>
     </div>
 
     <!-- Classification -->
@@ -152,14 +153,14 @@
       <div class="prediction-desc" id="regDesc">—</div>
       
       <!-- Detalhes do Desconto / Preço -->
-      <div class="prediction-details" id="regDetails" style="display: none; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="color: #a4b0be; font-size: 0.85rem;">Desconto Estimado:</span>
-          <span id="regDiscount" style="color: #2ed573; font-weight: 700; font-size: 0.95rem; background: rgba(46, 213, 115, 0.15); padding: 2px 6px; border-radius: 4px;">—</span>
+      <div class="prediction-details" id="regDetails" style="display: none; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="color: #a4b0be; font-size: 0.8rem;">Desconto Estimado:</span>
+          <span id="regDiscount" style="color: #2ed573; font-weight: 700; font-size: 0.85rem; background: rgba(46, 213, 115, 0.15); padding: 2px 6px; border-radius: 4px;">—</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: #a4b0be; font-size: 0.85rem;">Preço Alvo:</span>
-          <span id="regPrice" style="color: #ffffff; font-weight: 700; font-size: 0.95rem;">—</span>
+          <span style="color: #a4b0be; font-size: 0.8rem;">Preço Alvo:</span>
+          <span id="regPrice" style="color: #ffffff; font-weight: 700; font-size: 0.85rem;">—</span>
         </div>
       </div>
     </div>

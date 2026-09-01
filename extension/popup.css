@@ -107,14 +107,14 @@ body {
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 10px 16px;
   background: linear-gradient(135deg, rgba(var(--accent-primary-rgb), 0.15), rgba(var(--accent-secondary-rgb), 0.1));
   border-bottom: 1px solid var(--border-color);
 }
 
 .header-logo {
-  font-size: 28px;
+  font-size: 22px;
   filter: drop-shadow(0 0 8px rgba(var(--accent-primary-rgb), 0.5));
 }
 
@@ -168,7 +168,7 @@ body {
 
 /* ── Verificar / ligar API ── */
 .api-toolbar {
-  padding: 10px 20px;
+  padding: 6px 16px;
 }
 
 .btn-check-api {
@@ -208,8 +208,8 @@ body {
 }
 
 .api-help-panel {
-  margin: 10px 20px 0;
-  padding: 12px 14px;
+  margin: 8px 16px 0;
+  padding: 10px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -218,23 +218,23 @@ body {
 }
 
 .api-help-lead {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  line-height: 1.4;
+  margin-bottom: 6px;
+  line-height: 1.35;
 }
 
 .api-help-steps {
-  margin: 0 0 8px 18px;
+  margin: 0 0 6px 16px;
   padding: 0;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .api-help-steps li {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .api-help-steps a {
@@ -255,13 +255,13 @@ body {
 .api-help-note {
   font-size: 10px;
   color: var(--text-muted);
-  margin-bottom: 8px;
-  line-height: 1.4;
+  margin-bottom: 6px;
+  line-height: 1.35;
 }
 
 .api-help-command {
-  margin: 0 0 10px;
-  padding: 8px 10px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -313,7 +313,7 @@ body {
 
 /* ── Settings Panel ── */
 .settings-panel {
-  padding: 12px 20px;
+  padding: 10px 16px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   animation: fadeIn 0.2s ease;
@@ -378,13 +378,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 40px 20px;
+  gap: 10px;
+  padding: 24px 20px;
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 3px solid var(--border-color);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
@@ -403,9 +403,9 @@ body {
 /* ── Game Card ── */
 .game-card {
   display: flex;
-  gap: 14px;
-  padding: 14px;
-  margin: 0 20px 12px;
+  gap: 12px;
+  padding: 10px;
+  margin: 0 16px 8px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -413,8 +413,8 @@ body {
 }
 
 .game-image {
-  width: 120px;
-  height: 45px;
+  width: 100px;
+  height: 38px;
   object-fit: cover;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -425,11 +425,11 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .game-info h2 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
 }
@@ -456,8 +456,8 @@ body {
 
 /* ── Prediction Cards ── */
 .prediction-card {
-  margin: 0 20px 12px;
-  padding: 14px;
+  margin: 0 16px 8px;
+  padding: 10px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -467,14 +467,14 @@ body {
 .prediction-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
-.prediction-icon { font-size: 18px; }
+.prediction-icon { font-size: 15px; }
 
 .prediction-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -482,9 +482,9 @@ body {
 }
 
 .prediction-value {
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .prediction-value.days {
@@ -494,9 +494,9 @@ body {
 }
 
 .prediction-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: var(--glass-bg);
   border-radius: var(--radius-sm);
 }
@@ -506,7 +506,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .confidence-label {
@@ -539,66 +539,48 @@ body {
   text-align: right;
 }
 
-/* Probabilities */
+/* Probabilities — uma linha só, 3 chips (cai/mantém/sobe) em vez de 3 barras empilhadas */
 .probabilities {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 6px;
 }
 
-.prob-row {
+.prob-chip {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
   font-size: 11px;
+  font-weight: 600;
 }
 
-.prob-label {
-  width: 60px;
-  color: var(--text-secondary);
-  text-align: right;
-}
+.prob-chip .prob-icon { font-size: 12px; }
 
-.prob-bar-container {
-  flex: 1;
-  height: 4px;
-  background: var(--bg-secondary);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.prob-bar {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
-
-.prob-bar.cai { background: var(--accent-green); }
-.prob-bar.mantem { background: var(--accent-yellow); }
-.prob-bar.sobe { background: var(--accent-red); }
-
-.prob-value {
-  min-width: 36px;
-  text-align: right;
-  font-weight: 500;
-}
+.prob-chip.cai { color: var(--accent-green); }
+.prob-chip.mantem { color: var(--accent-yellow); }
+.prob-chip.sobe { color: var(--accent-red); }
 
 /* ── Error ── */
 .error {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 20px;
-  padding: 14px;
+  margin: 16px;
+  padding: 12px;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius);
 }
 
-.error-icon { font-size: 20px; }
+.error-icon { font-size: 18px; }
 
 .error p {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--accent-red);
 }
 
@@ -607,7 +589,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
+  padding: 8px 16px;
   border-top: 1px solid var(--border-color);
   font-size: 11px;
   color: var(--text-muted);
