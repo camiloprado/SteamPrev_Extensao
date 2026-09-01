@@ -6,24 +6,24 @@ from core.feature_engineering import (
     gerar_features_para_inferencia,
     calcular_dias_proxima_grande_promo,
     CON_LIST_FEATURE_COLUMNS,
+    CON_LIST_GRANDES_PROMOCOES_DOY,
 )
 
 
 class TestDiasProxPromo:
-    """Testes para cálculo de dias até próxima promoção."""
+    """Testes para cálculo de dias até próxima promoção. Deriva de CON_LIST_GRANDES_PROMOCOES_DOY em vez de hardcode para não ficar desatualizado se o calendário mudar de novo."""
 
     def test_antes_spring(self):
-        # Dia 50, Spring é dia 75 → 25 dias
-        assert calcular_dias_proxima_grande_promo(50) == 25
+        var_intSpring = CON_LIST_GRANDES_PROMOCOES_DOY[0]
+        assert calcular_dias_proxima_grande_promo(50) == var_intSpring - 50
 
     def test_entre_summer_autumn(self):
-        # Dia 200, Autumn é dia 327 → 127 dias
-        assert calcular_dias_proxima_grande_promo(200) == 127
+        var_intAutumn = CON_LIST_GRANDES_PROMOCOES_DOY[2]
+        assert calcular_dias_proxima_grande_promo(200) == var_intAutumn - 200
 
     def test_apos_todas(self):
-        # Dia 360, próxima é Spring (dia 75) do próximo ano
         var_intResult = calcular_dias_proxima_grande_promo(360)
-        assert var_intResult == (365 - 360) + 75  # 80 dias
+        assert var_intResult == (365 - 360) + min(CON_LIST_GRANDES_PROMOCOES_DOY)
 
 
 class TestFeatureEngineering:

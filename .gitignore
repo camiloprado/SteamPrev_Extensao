@@ -68,6 +68,7 @@ bot_output.txt
 
 # Dados e exports
 resources/dados/*.csv
+resources/dados/steam_applist.json
 resources/relatorios/
 
 # Jupyter notebooks (podem conter outputs com dados sensíveis)
