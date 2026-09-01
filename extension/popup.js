@@ -458,12 +458,11 @@ async function predict() {
   }
 }
 
+// historico_desconto só chega aqui quando há algo a reportar (backend omite
+// quando o jogo nunca teve desconto e não está em promoção agora).
 function textoHistoricoDesconto(arg_dictHistoricoDesconto) {
   if (arg_dictHistoricoDesconto.eh_maior_historico) {
     return `🏆 Este é o maior desconto já registrado nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos!`;
-  }
-  if (arg_dictHistoricoDesconto.maior_desconto_pct === 0) {
-    return `ℹ️ Este jogo nunca entrou em promoção nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos.`;
   }
   return `📊 Maior desconto histórico: ${arg_dictHistoricoDesconto.maior_desconto_pct}% em ${arg_dictHistoricoDesconto.data_maior_desconto} (últimos ${arg_dictHistoricoDesconto.janela_anos} anos)`;
 }

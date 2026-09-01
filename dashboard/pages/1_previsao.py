@@ -151,14 +151,14 @@ if var_boolPredictBtn and var_strQuery:
 
                 st.markdown("---")
 
-                # Comparação com o desconto histórico — sempre exibida, não só quando já em promoção
+                # Comparação com o desconto histórico — só aparece quando há algo a
+                # reportar (backend omite quando o jogo nunca teve desconto e não
+                # está em promoção agora).
                 var_dictHistoricoDesconto = var_dictData.get("historico_desconto")
                 if var_dictHistoricoDesconto:
                     var_intJanela = var_dictHistoricoDesconto["janela_anos"]
                     if var_dictHistoricoDesconto["eh_maior_historico"]:
                         st.success(f"🏆 Este é o maior desconto já registrado nos últimos {var_intJanela} anos!")
-                    elif var_dictHistoricoDesconto["maior_desconto_pct"] == 0:
-                        st.info(f"ℹ️ Este jogo nunca entrou em promoção nos últimos {var_intJanela} anos.")
                     else:
                         st.info(
                             f"📊 O maior desconto histórico foi **{var_dictHistoricoDesconto['maior_desconto_pct']}%** "

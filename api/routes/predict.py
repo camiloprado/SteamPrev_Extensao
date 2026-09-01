@@ -40,16 +40,17 @@ def _calcular_historico_desconto(arg_listHistorico: list, arg_intDescontoAtual: 
     - arg_intDescontoAtual (int): Percentual de desconto atual do jogo (0 se não estiver em promoção).
 
     Retorna:
-    - HistoricoDesconto | None: None se não há histórico disponível.
+    - HistoricoDesconto | None: None se não há histórico disponível, ou se o jogo
+      nunca teve desconto e também não está em promoção agora (nada relevante a
+      reportar — melhor omitir do que mostrar um "recorde" de 0%).
     """
     if not arg_listHistorico:
         return None
     var_dictMaiorDesconto = max(arg_listHistorico, key=lambda var_dictPonto: var_dictPonto["desconto"])
     var_intMaiorDesconto = var_dictMaiorDesconto["desconto"]
+    if var_intMaiorDesconto == 0 and arg_intDescontoAtual == 0:
+        return None
     return HistoricoDesconto(
-        # "Recorde" exige desconto_atual > 0 — sem isso, 0 (sem promoção) >= 0 (nunca
-        # teve desconto) dava True e alegava "maior desconto histórico" para um jogo
-        # que nunca entrou em promoção nenhuma vez.
         eh_maior_historico=arg_intDescontoAtual > 0 and arg_intDescontoAtual >= var_intMaiorDesconto,
         maior_desconto_pct=var_intMaiorDesconto,
         data_maior_desconto=(

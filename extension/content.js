@@ -277,12 +277,11 @@ function solicitarPrevisao(arg_strAppId) {
   });
 }
 
+// historico_desconto só chega aqui quando há algo a reportar (backend omite
+// quando o jogo nunca teve desconto e não está em promoção agora).
 function textoHistoricoDesconto(arg_dictHistoricoDesconto) {
   if (arg_dictHistoricoDesconto.eh_maior_historico) {
     return `🏆 Maior desconto já registrado nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos!`;
-  }
-  if (arg_dictHistoricoDesconto.maior_desconto_pct === 0) {
-    return `ℹ️ Nunca entrou em promoção nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos.`;
   }
   return `📊 Maior desconto histórico: ${arg_dictHistoricoDesconto.maior_desconto_pct}% em ${arg_dictHistoricoDesconto.data_maior_desconto} (últimos ${arg_dictHistoricoDesconto.janela_anos} anos)`;
 }
@@ -420,12 +419,9 @@ function renderizarResultados(arg_dictData) {
   }
 
   if (var_dictHistoricoDesconto) {
-    const var_boolNuncaTeveDesconto = var_dictHistoricoDesconto.maior_desconto_pct === 0;
     const elHistNormal = criarCard(
       "📊 Desconto Histórico",
-      var_dictHistoricoDesconto.eh_maior_historico
-        ? "🏆 Recorde"
-        : (var_boolNuncaTeveDesconto ? "—" : `${var_dictHistoricoDesconto.maior_desconto_pct}%`)
+      var_dictHistoricoDesconto.eh_maior_historico ? "🏆 Recorde" : `${var_dictHistoricoDesconto.maior_desconto_pct}%`
     );
     const elHistDesc = document.createElement("div");
     elHistDesc.className = "sp-card-desc";
