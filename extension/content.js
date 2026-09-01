@@ -293,6 +293,7 @@ function renderizarResultados(arg_dictData) {
   const var_dictGame = arg_dictData.game || {};
   const var_dictClassificacao = arg_dictData.classificacao;
   const var_dictRegressao = arg_dictData.regressao;
+  const var_dictHistoricoDesconto = arg_dictData.historico_desconto;
   const var_listWarnings = arg_dictData.warnings || [];
 
   var_listWarnings.forEach((w) => {
@@ -343,6 +344,16 @@ function renderizarResultados(arg_dictData) {
       ? `Término estimado: ${var_dictGame.sale_end_date}`
       : "Predição abortada: o jogo já está em promoção.";
     elSale.appendChild(elDesc);
+
+    if (var_dictHistoricoDesconto) {
+      const elHist = document.createElement("div");
+      elHist.className = "sp-card-desc";
+      elHist.textContent = var_dictHistoricoDesconto.eh_maior_historico
+        ? `🏆 Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
+        : `📊 Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+      elSale.appendChild(elHist);
+    }
+
     _var_objEls.results.appendChild(elSale);
 
     _var_objEls.pillIcon.textContent = "🎉";

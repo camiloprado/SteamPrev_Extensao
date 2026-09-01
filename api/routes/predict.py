@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import asyncio
 import logging
+from datetime import datetime
 
 from api.schemas import (
     GameQueryInput,
@@ -13,11 +14,12 @@ from api.schemas import (
     ClassificationResult,
     RegressionResult,
     GameInfo,
+    HistoricoDesconto,
     SearchResult,
 )
 
 from core.steam_client import SteamClient
-from core.itad_client import ITADClient
+from core.itad_client import ITADClient, CON_INT_JANELA_ANOS_PADRAO
 from core.feature_engineering import (
     gerar_features_para_inferencia,
     CON_LIST_FEATURE_COLUMNS,
@@ -170,14 +172,38 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
     if not var_dictSteamData:
         raise HTTPException(status_code=404, detail=f"Dados do jogo não disponíveis: {var_intAppid}")
 
-    # Early Return: Se o jogo já está em promoção, abortamos a predição.
+    # Early Return: Se o jogo já está em promoção, abortamos a predição, mas
+    # comparamos o desconto atual com o maior já registrado no histórico ITAD.
     if var_dictSteamData.get("is_on_sale"):
         logger.info(f"Bypass de predição ativado para appid {var_intAppid} (Em promoção).")
+        var_objHistoricoDesconto = None
+        var_listWarningsSale = []
+        try:
+            var_listHistoricoSale = await ITADClient.get_price_history(
+                var_intAppid, arg_floatPrecoBase=var_dictSteamData.get("price", 0.0)
+            )
+            if var_listHistoricoSale:
+                if any(var_dictPonto.get("fonte") == "mock" for var_dictPonto in var_listHistoricoSale):
+                    var_listWarningsSale.append("A API de histórico de preços (ITAD) está indisponível (chave ausente, limite de requisições ou erro de rede). O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
+                var_dictMaiorDesconto = max(var_listHistoricoSale, key=lambda var_dictPonto: var_dictPonto["desconto"])
+                var_intDescontoAtual = var_dictSteamData.get("discount_percent", 0)
+                var_objHistoricoDesconto = HistoricoDesconto(
+                    eh_maior_historico=var_intDescontoAtual >= var_dictMaiorDesconto["desconto"],
+                    maior_desconto_pct=var_dictMaiorDesconto["desconto"],
+                    data_maior_desconto=datetime.fromtimestamp(var_dictMaiorDesconto["timestamp"]).strftime("%Y-%m-%d"),
+                    janela_anos=CON_INT_JANELA_ANOS_PADRAO,
+                    fonte=var_listHistoricoSale[0].get("fonte", "mock"),
+                )
+        except Exception as e:
+            logger.warning(f"Falha ao buscar histórico para comparação de desconto (appid {var_intAppid}): {e}")
+
         return PredictionResponse(
             game=GameInfo(**var_dictSteamData),
             classificacao=None,
             regressao=None,
+            historico_desconto=var_objHistoricoDesconto,
             features_utilizadas=None,
+            warnings=var_listWarningsSale if var_listWarningsSale else None,
         )
         
     var_strGameName = var_dictSteamData.get("name", f"App {var_intAppid}")

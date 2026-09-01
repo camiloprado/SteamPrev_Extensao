@@ -95,6 +95,23 @@ class TestPredict:
         assert "desconto_previsto_pct" in var_dictRegressao
         assert "preco_estimado" in var_dictRegressao
 
+    def test_predict_on_sale_compara_desconto_historico(self, client):
+        var_objResponse = client.post("/predict/game", json={"query": "892970"})
+        assert var_objResponse.status_code == 200
+        var_dictData = var_objResponse.json()
+        assert var_dictData["game"]["is_on_sale"] is True
+        assert var_dictData["classificacao"] is None
+        assert var_dictData["regressao"] is None
+
+        var_dictHistorico = var_dictData.get("historico_desconto")
+        assert var_dictHistorico is not None
+        assert isinstance(var_dictHistorico["eh_maior_historico"], bool)
+        assert var_dictHistorico["maior_desconto_pct"] >= var_dictData["game"]["discount_percent"] or var_dictHistorico["eh_maior_historico"]
+        assert var_dictHistorico["janela_anos"] == 5
+        assert var_dictHistorico["fonte"] in ("real", "mock")
+        # Data no formato YYYY-MM-DD
+        assert len(var_dictHistorico["data_maior_desconto"]) == 10
+
     def test_predict_free_game(self, client):
         var_objResponse = client.post("/predict/game", json={"query": "730"})
         assert var_objResponse.status_code == 200

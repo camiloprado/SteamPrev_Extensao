@@ -160,6 +160,17 @@ if var_boolPredictBtn and var_strQuery:
                         var_strMsg += f" Término estimado: {var_strSaleEnd}."
                     st.success(f"🎉 {var_strMsg}")
                     st.info("💡 A predição não é necessária para jogos que já estão com oferta ativa.")
+
+                    var_dictHistoricoDesconto = var_dictData.get("historico_desconto")
+                    if var_dictHistoricoDesconto:
+                        var_intJanela = var_dictHistoricoDesconto["janela_anos"]
+                        if var_dictHistoricoDesconto["eh_maior_historico"]:
+                            st.success(f"🏆 Este é o maior desconto já registrado nos últimos {var_intJanela} anos!")
+                        else:
+                            st.info(
+                                f"📊 O maior desconto histórico foi **{var_dictHistoricoDesconto['maior_desconto_pct']}%** "
+                                f"em {var_dictHistoricoDesconto['data_maior_desconto']} (últimos {var_intJanela} anos)."
+                            )
                 else:
                     # ── Resultados ──
                     var_objColClf, var_objColReg = st.columns(2)

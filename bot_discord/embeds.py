@@ -17,6 +17,7 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
     var_dictGame = arg_dictData.get("game", {})
     var_dictClassificacao = arg_dictData.get("classificacao")
     var_dictRegressao = arg_dictData.get("regressao")
+    var_dictHistoricoDesconto = arg_dictData.get("historico_desconto")
 
     # Cor baseada na classificação
     var_dictColorMap = {
@@ -61,6 +62,22 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
         value=f"{var_intReview}%" if var_intReview else "N/A",
         inline=True,
     )
+
+    # Comparação com o desconto histórico (só presente quando já está em promoção)
+    if var_dictHistoricoDesconto:
+        var_intJanela = var_dictHistoricoDesconto["janela_anos"]
+        if var_dictHistoricoDesconto["eh_maior_historico"]:
+            var_strHistoricoValor = f"🏆 Este é o maior desconto já registrado nos últimos {var_intJanela} anos!"
+        else:
+            var_strHistoricoValor = (
+                f"📊 O maior desconto histórico foi **{var_dictHistoricoDesconto['maior_desconto_pct']}%** "
+                f"em {var_dictHistoricoDesconto['data_maior_desconto']} (últimos {var_intJanela} anos)."
+            )
+        var_objEmbed.add_field(
+            name="🎉 Desconto Ativo",
+            value=var_strHistoricoValor,
+            inline=False,
+        )
 
     # Classificação
     if var_dictClassificacao:

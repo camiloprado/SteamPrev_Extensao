@@ -45,6 +45,19 @@ CON_DICT_MOCK_GAMES = {
         "release_date": "2020-12-10",
         "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1091500/header.jpg",
     },
+    892970: {
+        "name": "Valheim",
+        "appid": 892970,
+        "is_free": False,
+        "price": 44.99,
+        "review_score": 94,
+        "total_reviews": 300000,
+        "release_date": "2021-02-02",
+        "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/892970/header.jpg",
+        "is_on_sale": True,
+        "discount_percent": 20,
+        "sale_end_date": None,
+    },
 }
 
 def _gerar_mock_padrao(arg_intAppid: int) -> dict:

@@ -80,11 +80,23 @@ class RegressionResult(BaseModel):
     descricao: str = Field(description="Descrição legível do resultado")
 
 
+class HistoricoDesconto(BaseModel):
+    """Compara o desconto atual (jogo já em promoção) com o histórico de preços."""
+    eh_maior_historico: bool = Field(description="True se o desconto atual iguala ou supera o maior já registrado")
+    maior_desconto_pct: int = Field(description="Maior percentual de desconto já registrado na janela")
+    data_maior_desconto: Optional[str] = Field(default=None, description="Data (YYYY-MM-DD) do maior desconto histórico")
+    janela_anos: int = Field(description="Quantidade de anos de histórico considerados na comparação")
+    fonte: str = Field(description="'real' (ITAD) ou 'mock' (simulado, ITAD indisponível)")
+
+
 class PredictionResponse(BaseModel):
     """Resposta completa de predição."""
     game: GameInfo
     classificacao: Optional[ClassificationResult] = None
     regressao: Optional[RegressionResult] = None
+    historico_desconto: Optional[HistoricoDesconto] = Field(
+        default=None, description="Só presente quando o jogo já está em promoção (game.is_on_sale)."
+    )
     features_utilizadas: Optional[dict] = None
     warnings: Optional[list[str]] = Field(default=None, description="Avisos sobre falhas parciais (ex: ITAD API).")
 

@@ -20,6 +20,7 @@ CON_STR_ITAD_API_KEY = os.getenv("ITAD_API_KEY")
 
 _itad_cache = {}
 CON_INT_CACHE_TTL = 300  # 5 minutos
+CON_INT_JANELA_ANOS_PADRAO = 5
 
 class ITADClient:
     """
@@ -104,7 +105,7 @@ class ITADClient:
         return await arg_objClient.get(arg_strUrl, params=arg_dictParams)
 
     @staticmethod
-    async def get_price_history(arg_intAppid: int, arg_floatPrecoBase: float = 0.0, arg_intAnos: int = 5) -> list[dict]:
+    async def get_price_history(arg_intAppid: int, arg_floatPrecoBase: float = 0.0, arg_intAnos: int = CON_INT_JANELA_ANOS_PADRAO) -> list[dict]:
         """
         Busca o histórico de preços real de um jogo via ITAD API v2.
         Requer ITAD_API_KEY no .env. Sem chave, ou em 429, usa histórico simulado.
