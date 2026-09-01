@@ -153,7 +153,7 @@ class ITADClient:
                 
                 if var_objResponseLookup.status_code != 200:
                     logger.warning(f"ITAD API: Falha no lookup do appid {arg_intAppid} ({var_objResponseLookup.status_code})")
-                    return []
+                    return ITADClient._generate_mock_history(arg_intAppid, arg_floatPrecoBase)
                     
                 var_dictLookup = var_objResponseLookup.json()
                 if not var_dictLookup.get("found"):
