@@ -82,7 +82,7 @@ class RegressionResult(BaseModel):
 
 class HistoricoDesconto(BaseModel):
     """Compara o desconto atual (jogo já em promoção) com o histórico de preços."""
-    eh_maior_historico: bool = Field(description="True se o desconto atual iguala ou supera o maior já registrado")
+    eh_maior_historico: bool = Field(description="True se ha desconto ativo (>0%) e ele iguala ou supera o maior ja registrado")
     maior_desconto_pct: int = Field(description="Maior percentual de desconto já registrado na janela")
     data_maior_desconto: Optional[str] = Field(default=None, description="Data (YYYY-MM-DD) do maior desconto histórico")
     janela_anos: int = Field(description="Quantidade de anos de histórico considerados na comparação")

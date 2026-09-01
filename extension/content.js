@@ -277,6 +277,16 @@ function solicitarPrevisao(arg_strAppId) {
   });
 }
 
+function textoHistoricoDesconto(arg_dictHistoricoDesconto) {
+  if (arg_dictHistoricoDesconto.eh_maior_historico) {
+    return `🏆 Maior desconto já registrado nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos!`;
+  }
+  if (arg_dictHistoricoDesconto.maior_desconto_pct === 0) {
+    return `ℹ️ Nunca entrou em promoção nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos.`;
+  }
+  return `📊 Maior desconto histórico: ${arg_dictHistoricoDesconto.maior_desconto_pct}% em ${arg_dictHistoricoDesconto.data_maior_desconto} (últimos ${arg_dictHistoricoDesconto.janela_anos} anos)`;
+}
+
 function textoPreco(arg_dictGame) {
   if (arg_dictGame.is_coming_soon) return "Não Lançado";
   const var_floatPrice = arg_dictGame.price || 0;
@@ -348,9 +358,7 @@ function renderizarResultados(arg_dictData) {
     if (var_dictHistoricoDesconto) {
       const elHist = document.createElement("div");
       elHist.className = "sp-card-desc";
-      elHist.textContent = var_dictHistoricoDesconto.eh_maior_historico
-        ? `🏆 Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
-        : `📊 Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+      elHist.textContent = textoHistoricoDesconto(var_dictHistoricoDesconto);
       elSale.appendChild(elHist);
     }
 
@@ -412,17 +420,16 @@ function renderizarResultados(arg_dictData) {
   }
 
   if (var_dictHistoricoDesconto) {
+    const var_boolNuncaTeveDesconto = var_dictHistoricoDesconto.maior_desconto_pct === 0;
     const elHistNormal = criarCard(
       "📊 Desconto Histórico",
       var_dictHistoricoDesconto.eh_maior_historico
         ? "🏆 Recorde"
-        : `${var_dictHistoricoDesconto.maior_desconto_pct}%`
+        : (var_boolNuncaTeveDesconto ? "—" : `${var_dictHistoricoDesconto.maior_desconto_pct}%`)
     );
     const elHistDesc = document.createElement("div");
     elHistDesc.className = "sp-card-desc";
-    elHistDesc.textContent = var_dictHistoricoDesconto.eh_maior_historico
-      ? `Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
-      : `Maior desconto em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+    elHistDesc.textContent = textoHistoricoDesconto(var_dictHistoricoDesconto);
     elHistNormal.appendChild(elHistDesc);
     _var_objEls.results.appendChild(elHistNormal);
   }

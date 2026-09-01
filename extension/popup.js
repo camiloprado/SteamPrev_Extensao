@@ -458,6 +458,16 @@ async function predict() {
   }
 }
 
+function textoHistoricoDesconto(arg_dictHistoricoDesconto) {
+  if (arg_dictHistoricoDesconto.eh_maior_historico) {
+    return `🏆 Este é o maior desconto já registrado nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos!`;
+  }
+  if (arg_dictHistoricoDesconto.maior_desconto_pct === 0) {
+    return `ℹ️ Este jogo nunca entrou em promoção nos últimos ${arg_dictHistoricoDesconto.janela_anos} anos.`;
+  }
+  return `📊 Maior desconto histórico: ${arg_dictHistoricoDesconto.maior_desconto_pct}% em ${arg_dictHistoricoDesconto.data_maior_desconto} (últimos ${arg_dictHistoricoDesconto.janela_anos} anos)`;
+}
+
 // ── Show Results ──
 function showResults(arg_dictData) {
   hideAll();
@@ -539,9 +549,7 @@ function showResults(arg_dictData) {
     const elSaleHistorico = document.getElementById("saleHistorico");
     const var_dictHistoricoDesconto = arg_dictData.historico_desconto;
     if (var_dictHistoricoDesconto) {
-      elSaleHistorico.textContent = var_dictHistoricoDesconto.eh_maior_historico
-        ? `🏆 Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
-        : `📊 Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+      elSaleHistorico.textContent = textoHistoricoDesconto(var_dictHistoricoDesconto);
       elSaleHistorico.style.display = "block";
     } else {
       elSaleHistorico.style.display = "none";
@@ -618,9 +626,7 @@ function showResults(arg_dictData) {
   const var_dictHistoricoDesconto = arg_dictData.historico_desconto;
   if (var_dictHistoricoDesconto) {
     elHistCard.style.display = "block";
-    document.getElementById("histDesc").textContent = var_dictHistoricoDesconto.eh_maior_historico
-      ? `🏆 Este é o maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
-      : `Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+    document.getElementById("histDesc").textContent = textoHistoricoDesconto(var_dictHistoricoDesconto);
   } else {
     elHistCard.style.display = "none";
   }

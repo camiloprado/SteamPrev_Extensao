@@ -157,6 +157,8 @@ if var_boolPredictBtn and var_strQuery:
                     var_intJanela = var_dictHistoricoDesconto["janela_anos"]
                     if var_dictHistoricoDesconto["eh_maior_historico"]:
                         st.success(f"🏆 Este é o maior desconto já registrado nos últimos {var_intJanela} anos!")
+                    elif var_dictHistoricoDesconto["maior_desconto_pct"] == 0:
+                        st.info(f"ℹ️ Este jogo nunca entrou em promoção nos últimos {var_intJanela} anos.")
                     else:
                         st.info(
                             f"📊 O maior desconto histórico foi **{var_dictHistoricoDesconto['maior_desconto_pct']}%** "

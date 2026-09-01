@@ -68,6 +68,8 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
         var_intJanela = var_dictHistoricoDesconto["janela_anos"]
         if var_dictHistoricoDesconto["eh_maior_historico"]:
             var_strHistoricoValor = f"🏆 Este é o maior desconto já registrado nos últimos {var_intJanela} anos!"
+        elif var_dictHistoricoDesconto["maior_desconto_pct"] == 0:
+            var_strHistoricoValor = f"ℹ️ Este jogo nunca entrou em promoção nos últimos {var_intJanela} anos."
         else:
             var_strHistoricoValor = (
                 f"📊 O maior desconto histórico foi **{var_dictHistoricoDesconto['maior_desconto_pct']}%** "

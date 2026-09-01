@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 from api.main import app
+from api.routes.predict import _calcular_historico_desconto
 from tests.unit.mocks.mock_data import get_mock_steam_game, get_mock_itad_history
 
 
@@ -26,6 +27,47 @@ def mock_external_apis():
             mock_itad.side_effect = mock_history_wrapper
             
             yield
+
+
+class TestCalcularHistoricoDesconto:
+    """
+    Bug reportado: jogo sem nenhum desconto no histórico (maior_desconto_pct=0) e
+    sem promoção ativa (desconto_atual=0) alegava "maior desconto histórico" porque
+    0 >= 0 era True. eh_maior_historico agora exige desconto_atual > 0.
+    """
+
+    def test_sem_historico_retorna_none(self):
+        assert _calcular_historico_desconto([], 0) is None
+
+    def test_nunca_teve_desconto_nao_e_recorde(self):
+        var_listHistorico = [
+            {"timestamp": 1700000000, "preco": 100.0, "desconto": 0, "fonte": "real"},
+            {"timestamp": 1710000000, "preco": 100.0, "desconto": 0, "fonte": "real"},
+        ]
+        var_objResultado = _calcular_historico_desconto(var_listHistorico, 0)
+        assert var_objResultado.eh_maior_historico is False
+        assert var_objResultado.maior_desconto_pct == 0
+        assert var_objResultado.data_maior_desconto is None
+
+    def test_primeira_promocao_de_sempre_e_recorde(self):
+        # Nunca teve desconto no histórico, mas está em promoção agora — isso
+        # É um recorde de verdade (supera o "nunca" implícito de 0%).
+        var_listHistorico = [{"timestamp": 1700000000, "preco": 100.0, "desconto": 0, "fonte": "real"}]
+        var_objResultado = _calcular_historico_desconto(var_listHistorico, 30)
+        assert var_objResultado.eh_maior_historico is True
+
+    def test_desconto_atual_supera_historico_e_recorde(self):
+        var_listHistorico = [{"timestamp": 1700000000, "preco": 50.0, "desconto": 40, "fonte": "real"}]
+        var_objResultado = _calcular_historico_desconto(var_listHistorico, 50)
+        assert var_objResultado.eh_maior_historico is True
+        assert var_objResultado.maior_desconto_pct == 40
+
+    def test_desconto_atual_abaixo_do_historico_nao_e_recorde(self):
+        var_listHistorico = [{"timestamp": 1700000000, "preco": 50.0, "desconto": 40, "fonte": "real"}]
+        var_objResultado = _calcular_historico_desconto(var_listHistorico, 10)
+        assert var_objResultado.eh_maior_historico is False
+        assert var_objResultado.maior_desconto_pct == 40
+        assert var_objResultado.data_maior_desconto == "2023-11-14"
 
 
 class TestHealth:
@@ -105,7 +147,11 @@ class TestPredict:
         var_dictHistorico = var_dictData.get("historico_desconto")
         assert var_dictHistorico is not None
         assert var_dictHistorico["maior_desconto_pct"] >= 0
-        assert len(var_dictHistorico["data_maior_desconto"]) == 10
+        # data_maior_desconto só é None quando maior_desconto_pct == 0 (nunca teve desconto)
+        if var_dictHistorico["maior_desconto_pct"] > 0:
+            assert len(var_dictHistorico["data_maior_desconto"]) == 10
+        else:
+            assert var_dictHistorico["data_maior_desconto"] is None
         assert var_dictHistorico["janela_anos"] == 5
 
     def test_predict_latest_returns_regressao(self, client):

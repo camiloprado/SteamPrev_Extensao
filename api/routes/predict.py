@@ -45,10 +45,17 @@ def _calcular_historico_desconto(arg_listHistorico: list, arg_intDescontoAtual: 
     if not arg_listHistorico:
         return None
     var_dictMaiorDesconto = max(arg_listHistorico, key=lambda var_dictPonto: var_dictPonto["desconto"])
+    var_intMaiorDesconto = var_dictMaiorDesconto["desconto"]
     return HistoricoDesconto(
-        eh_maior_historico=arg_intDescontoAtual >= var_dictMaiorDesconto["desconto"],
-        maior_desconto_pct=var_dictMaiorDesconto["desconto"],
-        data_maior_desconto=datetime.fromtimestamp(var_dictMaiorDesconto["timestamp"]).strftime("%Y-%m-%d"),
+        # "Recorde" exige desconto_atual > 0 — sem isso, 0 (sem promoção) >= 0 (nunca
+        # teve desconto) dava True e alegava "maior desconto histórico" para um jogo
+        # que nunca entrou em promoção nenhuma vez.
+        eh_maior_historico=arg_intDescontoAtual > 0 and arg_intDescontoAtual >= var_intMaiorDesconto,
+        maior_desconto_pct=var_intMaiorDesconto,
+        data_maior_desconto=(
+            datetime.fromtimestamp(var_dictMaiorDesconto["timestamp"]).strftime("%Y-%m-%d")
+            if var_intMaiorDesconto > 0 else None
+        ),
         janela_anos=CON_INT_JANELA_ANOS_PADRAO,
         fonte=arg_listHistorico[0].get("fonte", "mock"),
     )
