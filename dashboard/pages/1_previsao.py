@@ -57,10 +57,10 @@ var_strModoBusca = st.radio(
 var_dictResultadosBusca = {}
 if "Nome" in var_strModoBusca:
     # Também fora do form: cada tecla digitada já filtra o catálogo antes de renderizar o form
+    # Label visível de propósito — dois campos empilhados e ambos escondidos confundiam com o selectbox abaixo
     var_strBuscaTexto = st.text_input(
-        "🎮 Digite o nome do jogo",
-        placeholder="Digite ao menos 2 letras para buscar...",
-        label_visibility="collapsed",
+        "🔎 Digite pra buscar (mín. 2 letras)",
+        placeholder="Ex: Forza, Yakuza, Elden Ring...",
     )
     var_dictResultadosBusca = buscar_jogos_no_catalogo(var_strBuscaTexto, var_listGameCatalog)
 
@@ -75,6 +75,7 @@ with st.form("previsao_form", clear_on_submit=False):
                 options=[""] + list(var_dictResultadosBusca.keys()),
                 index=0,
                 label_visibility="collapsed",
+                placeholder="Resultados aparecem aqui após buscar acima" if not var_dictResultadosBusca else "Selecione um jogo",
             )
             var_strQuery = str(var_dictResultadosBusca[var_strGameSelected]) if var_strGameSelected else ""
         else:
