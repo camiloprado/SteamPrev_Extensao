@@ -25,13 +25,20 @@ def get_game_catalog():
     try:
         with open("resources/dados/steam_applist.json", "r", encoding="utf-8") as var_fileApplist:
             var_listData = json.load(var_fileApplist)
-        # Ordenar alfabeticamente para facilitar a vida
-        var_listDataSorted = sorted([var_dictG for var_dictG in var_listData if var_dictG.get("name")], key=lambda x: x["name"])
-        return {f"{var_dictG['name']} ({var_dictG['appid']})": var_dictG['appid'] for var_dictG in var_listDataSorted}
+        return sorted([var_dictG for var_dictG in var_listData if var_dictG.get("name")], key=lambda x: x["name"])
     except Exception:
-        return {}
+        return []
 
-var_dictGameCatalog = get_game_catalog()
+def buscar_jogos_no_catalogo(arg_strQuery: str, arg_listCatalogo: list, arg_intLimite: int = 30) -> dict:
+    # Filtra em memória e limita o resultado — evita mandar o catálogo inteiro (280k+ jogos) pro navegador a cada rerender
+    if not arg_strQuery or len(arg_strQuery) < 2:
+        return {}
+    var_strQueryLower = arg_strQuery.lower().strip()
+    var_listMatches = [var_dictG for var_dictG in arg_listCatalogo if var_strQueryLower in var_dictG["name"].lower()]
+    var_listMatches.sort(key=lambda var_dictG: not var_dictG["name"].lower().startswith(var_strQueryLower))
+    return {f"{var_dictG['name']} ({var_dictG['appid']})": var_dictG['appid'] for var_dictG in var_listMatches[:arg_intLimite]}
+
+var_listGameCatalog = get_game_catalog()
 var_dictHorizonteOpcoes = {
     "latest": "Padrão (Latest)",
     "30d_latest": "30 Dias",
@@ -47,6 +54,16 @@ var_strModoBusca = st.radio(
     label_visibility="collapsed",
 )
 
+var_dictResultadosBusca = {}
+if "Nome" in var_strModoBusca:
+    # Também fora do form: cada tecla digitada já filtra o catálogo antes de renderizar o form
+    var_strBuscaTexto = st.text_input(
+        "🎮 Digite o nome do jogo",
+        placeholder="Digite ao menos 2 letras para buscar...",
+        label_visibility="collapsed",
+    )
+    var_dictResultadosBusca = buscar_jogos_no_catalogo(var_strBuscaTexto, var_listGameCatalog)
+
 # ── Formulário de Busca (Enter confirma) ──
 with st.form("previsao_form", clear_on_submit=False):
     var_objColSearch, var_objColBtn = st.columns([4, 1])
@@ -55,11 +72,11 @@ with st.form("previsao_form", clear_on_submit=False):
         if "Nome" in var_strModoBusca:
             var_strGameSelected = st.selectbox(
                 "🎮 Escolha o Jogo",
-                options=[""] + list(var_dictGameCatalog.keys()),
+                options=[""] + list(var_dictResultadosBusca.keys()),
                 index=0,
                 label_visibility="collapsed",
             )
-            var_strQuery = str(var_dictGameCatalog[var_strGameSelected]) if var_strGameSelected else ""
+            var_strQuery = str(var_dictResultadosBusca[var_strGameSelected]) if var_strGameSelected else ""
         else:
             var_strQuery = st.text_input(
                 "🎮 AppID do Jogo",
