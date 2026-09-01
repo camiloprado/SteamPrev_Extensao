@@ -10,6 +10,7 @@ const CON_STR_DEFAULT_API_URL = "http://localhost:8000";
 const CON_STR_DEFAULT_DASHBOARD_URL = "http://localhost:8501";
 const CON_STR_DOCKER_UP_CMD = "docker compose up -d api";
 const CON_STR_BTN_CHECK_LABEL = "🔌 Verificar / ligar API";
+const CON_INT_STATUS_POLL_MS = 5000;
 
 // Estado global das URLs (carregado do storage)
 let _var_strApiBaseUrl = CON_STR_DEFAULT_API_URL;
@@ -151,6 +152,7 @@ function carregarUrlApi() {
     atualizarLinksDocs();
     checkApiStatus();
     checkActiveTab();
+    setInterval(checkApiStatus, CON_INT_STATUS_POLL_MS);
   });
 }
 

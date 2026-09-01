@@ -11,11 +11,14 @@ const CON_STR_API_NOTICE =
   "Para ligar ou verificar a API, clique no ícone da extensão na barra superior do navegador.";
 const CON_STR_PILL_API_HINT = "API: ícone da extensão";
 
+const CON_INT_RETRY_MS = 8000;
+
 let _var_strCurrentAppId = null;
 let _var_strClosedAppId = null;
 let _var_boolCollapsed = false;
 let _var_objShadow = null;
 let _var_elRoot = null;
+let _var_intRetryTimer = null;
 
 const _var_objEls = {};
 
@@ -181,6 +184,25 @@ function mostrarWidget() {
 function esconderWidget() {
   if (!_var_elRoot) return;
   _var_elRoot.classList.add("sp-hidden");
+  pararRetry();
+}
+
+function pararRetry() {
+  if (_var_intRetryTimer) {
+    clearInterval(_var_intRetryTimer);
+    _var_intRetryTimer = null;
+  }
+}
+
+function agendarRetry(arg_strAppId) {
+  pararRetry();
+  _var_intRetryTimer = setInterval(() => {
+    if (arg_strAppId !== _var_strCurrentAppId) {
+      pararRetry();
+      return;
+    }
+    solicitarPrevisao(arg_strAppId);
+  }, CON_INT_RETRY_MS);
 }
 
 function atualizarModoExibicao() {
@@ -245,9 +267,12 @@ function solicitarPrevisao(arg_strAppId) {
       return;
     }
     if (!response || !response.ok) {
-      mostrarErro((response && response.error) || "Não foi possível conectar à API");
+      const var_strMsg = (response && response.error) || "Não foi possível conectar à API";
+      mostrarErro(`${var_strMsg} — tentando reconectar automaticamente...`);
+      agendarRetry(arg_strAppId);
       return;
     }
+    pararRetry();
     renderizarResultados(response.data);
   });
 }
