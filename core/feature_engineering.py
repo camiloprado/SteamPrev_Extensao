@@ -58,6 +58,33 @@ CON_DICT_LABEL_MAP_CLASSIFICACAO_EMOJI = {0: "📉 Cai", 1: "➡️ Mantém", 2:
 CON_LIST_GRANDES_PROMOCOES_DOY = [67, 174, 299, 348]  # Spring, Summer, Autumn, Winter
 
 
+def validar_features_modelo(arg_objModelo) -> list[str] | None:
+    """
+    Compara as features que o modelo espera (feature_names_in_, exposto por
+    sklearn/XGBoost quando treinados com um DataFrame) contra CON_LIST_FEATURE_COLUMNS.
+
+    Detecta o cenário que já aconteceu em produção: a Fábrica troca uma feature
+    (ex.: preco_atual_hist → preco_zscore_janela) e o código de inferência da
+    Extensão fica desatualizado — toda predição falha silenciosamente (None),
+    sem nada visível no /health.
+
+    Parâmetros:
+    - arg_objModelo: modelo .joblib carregado (classificação ou regressão).
+
+    Retorna:
+    - list[str] | None: lista de features que o MODELO espera, se diferente de
+      CON_LIST_FEATURE_COLUMNS; None se compatível ou se o modelo não expõe
+      feature_names_in_ (não há como validar nesse caso).
+    """
+    var_listEsperadoPeloModelo = getattr(arg_objModelo, "feature_names_in_", None)
+    if var_listEsperadoPeloModelo is None:
+        return None
+    var_listEsperadoPeloModelo = list(var_listEsperadoPeloModelo)
+    if var_listEsperadoPeloModelo != CON_LIST_FEATURE_COLUMNS:
+        return var_listEsperadoPeloModelo
+    return None
+
+
 def calcular_dias_proxima_grande_promo(arg_intDiaDoAno: int) -> int:
     """
     Calcula distância em dias até a próxima grande promoção Steam.

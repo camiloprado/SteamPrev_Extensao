@@ -26,6 +26,13 @@ async def health_check(request: Request):
     if not var_dictModelosStatus["loaded"]:
         var_strStatus = "unhealthy"
 
+    # Modelo carregado na memória, mas com features diferentes das geradas pela
+    # inferência atual (ex.: Fábrica retreinou com uma feature nova e o deploy
+    # da Extensão ficou desatualizado) — prediz "com sucesso" só que sempre None,
+    # sem isso o /health mentiria "healthy" com a predição de fato quebrada.
+    if var_dictModelosStatus.get("features_incompativeis"):
+        var_strStatus = "degraded"
+
     return HealthResponse(
         status=var_strStatus,
         models=var_dictModelosStatus,

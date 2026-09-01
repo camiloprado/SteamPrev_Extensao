@@ -526,6 +526,7 @@ function showResults(arg_dictData) {
     elSaleCard.style.display = "block";
     elClassCard.style.display = "none";
     elRegCard.style.display = "none";
+    document.getElementById("histCard").style.display = "none"; // usa o card saleHistorico, não este
 
     document.getElementById("saleValue").textContent = `${var_dictGame.discount_percent}% de Desconto`;
     const var_strSaleEnd = var_dictGame.sale_end_date;
@@ -610,6 +611,18 @@ function showResults(arg_dictData) {
     }
   } else {
     elRegCard.style.display = "none";
+  }
+
+  // Historico de desconto — sempre exibido no fluxo normal (fora de promocao)
+  const elHistCard = document.getElementById("histCard");
+  const var_dictHistoricoDesconto = arg_dictData.historico_desconto;
+  if (var_dictHistoricoDesconto) {
+    elHistCard.style.display = "block";
+    document.getElementById("histDesc").textContent = var_dictHistoricoDesconto.eh_maior_historico
+      ? `🏆 Este é o maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
+      : `Maior desconto histórico: ${var_dictHistoricoDesconto.maior_desconto_pct}% em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+  } else {
+    elHistCard.style.display = "none";
   }
 }
 

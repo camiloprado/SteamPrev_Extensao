@@ -10,6 +10,8 @@ import threading
 from pathlib import Path
 from datetime import datetime
 
+from core.feature_engineering import validar_features_modelo
+
 logger = logging.getLogger("api.models_loader")
 
 
@@ -26,7 +28,13 @@ class ModelManager:
         self._var_dictClassificacaoMtime = {}
         self._var_dictRegressaoMtime = {}
         self._var_dictRegressaoDescontoMtime = {}
-        
+
+        # Features que o modelo espera != CON_LIST_FEATURE_COLUMNS (ex.: Fábrica
+        # trocou uma feature e a inferência não foi atualizada) — populado em
+        # _ensure_models_for_horizon_locked(), consumido por get_status()/health.
+        # {horizonte: {"classificacao"|"regressao_dias"|"regressao_desconto": [features do modelo]}}
+        self._var_dictFeatureIssues = {}
+
         self._var_boolLoaded = False
         self._var_strCurrentHorizon = "latest"
 
@@ -138,6 +146,8 @@ class ModelManager:
         else:
             var_pathRegressaoDesconto = self._var_pathModels / f"modelo_regressao_desconto_{var_strHorizonte}.joblib"
 
+        var_dictIssuesHorizonte = self._var_dictFeatureIssues.setdefault(var_strHorizonte, {})
+
         # Checa atualização do arquivo de Classificação
         if var_pathClassificacao.exists():
             var_floatMtime = var_pathClassificacao.stat().st_mtime
@@ -145,6 +155,7 @@ class ModelManager:
                 logger.info(f"🔄 Carregando modelo de classificação para horizonte: {var_strHorizonte}")
                 self._var_dictClassificacaoModels[var_strHorizonte] = joblib.load(var_pathClassificacao)
                 self._var_dictClassificacaoMtime[var_strHorizonte] = var_floatMtime
+                self._registrar_feature_issue(var_dictIssuesHorizonte, "classificacao", self._var_dictClassificacaoModels[var_strHorizonte])
                 var_boolReloaded = True
 
         # Checa atualização do arquivo de Regressão Dias
@@ -154,6 +165,7 @@ class ModelManager:
                 logger.info(f"🔄 Carregando modelo de regressão (dias) para horizonte: {var_strHorizonte}")
                 self._var_dictRegressaoModels[var_strHorizonte] = joblib.load(var_pathRegressao)
                 self._var_dictRegressaoMtime[var_strHorizonte] = var_floatMtime
+                self._registrar_feature_issue(var_dictIssuesHorizonte, "regressao_dias", self._var_dictRegressaoModels[var_strHorizonte])
                 var_boolReloaded = True
 
         # Checa atualização do arquivo de Regressão Desconto
@@ -163,12 +175,25 @@ class ModelManager:
                 logger.info(f"🔄 Carregando modelo de regressão (desconto) para horizonte: {var_strHorizonte}")
                 self._var_dictRegressaoDescontoModels[var_strHorizonte] = joblib.load(var_pathRegressaoDesconto)
                 self._var_dictRegressaoDescontoMtime[var_strHorizonte] = var_floatMtime
+                self._registrar_feature_issue(var_dictIssuesHorizonte, "regressao_desconto", self._var_dictRegressaoDescontoModels[var_strHorizonte])
                 var_boolReloaded = True
 
         if var_boolReloaded:
             gc.collect()
 
         return var_boolReloaded
+
+    def _registrar_feature_issue(self, arg_dictIssuesHorizonte: dict, arg_strTipo: str, arg_objModelo) -> None:
+        """Valida um modelo recém-carregado contra CON_LIST_FEATURE_COLUMNS e registra/limpa o issue correspondente."""
+        var_listMismatch = validar_features_modelo(arg_objModelo)
+        if var_listMismatch:
+            logger.error(
+                f"⚠️ Modelo '{arg_strTipo}' espera features diferentes das geradas pela inferência atual. "
+                f"Modelo espera: {var_listMismatch}. Rebuild da imagem/redeploy provavelmente necessário."
+            )
+            arg_dictIssuesHorizonte[arg_strTipo] = var_listMismatch
+        else:
+            arg_dictIssuesHorizonte.pop(arg_strTipo, None)
 
     @property
     def is_loaded(self) -> bool:
@@ -217,6 +242,7 @@ class ModelManager:
         Retorna:
         - dict: Dicionário com status de cada modelo.
         """
+        var_listFeaturesIncompativeis = list(self._var_dictFeatureIssues.get(self._var_strCurrentHorizon, {}).keys())
         return {
             "loaded": self._var_boolLoaded,
             "classificacao": self.classificacao_available,
@@ -224,6 +250,7 @@ class ModelManager:
             "regressao_desconto": self.regressao_desconto_available,
             "pipeline_escalonamento": self._var_objPipelineEscalonamento is not None,
             "models_path": str(self._var_pathModels),
+            "features_incompativeis": var_listFeaturesIncompativeis,
         }
 
     @property

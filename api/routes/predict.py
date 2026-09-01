@@ -31,6 +31,29 @@ logger = logging.getLogger("api.predict")
 router = APIRouter(tags=["Prediction"])
 
 
+def _calcular_historico_desconto(arg_listHistorico: list, arg_intDescontoAtual: int) -> HistoricoDesconto | None:
+    """
+    Compara o desconto atual com o maior já registrado no histórico de preços.
+
+    Parâmetros:
+    - arg_listHistorico (list): Histórico já obtido via ITADClient.get_price_history (evita nova chamada).
+    - arg_intDescontoAtual (int): Percentual de desconto atual do jogo (0 se não estiver em promoção).
+
+    Retorna:
+    - HistoricoDesconto | None: None se não há histórico disponível.
+    """
+    if not arg_listHistorico:
+        return None
+    var_dictMaiorDesconto = max(arg_listHistorico, key=lambda var_dictPonto: var_dictPonto["desconto"])
+    return HistoricoDesconto(
+        eh_maior_historico=arg_intDescontoAtual >= var_dictMaiorDesconto["desconto"],
+        maior_desconto_pct=var_dictMaiorDesconto["desconto"],
+        data_maior_desconto=datetime.fromtimestamp(var_dictMaiorDesconto["timestamp"]).strftime("%Y-%m-%d"),
+        janela_anos=CON_INT_JANELA_ANOS_PADRAO,
+        fonte=arg_listHistorico[0].get("fonte", "mock"),
+    )
+
+
 def _obter_cap_dias_horizonte(arg_strHorizonte: str) -> int:
     """
     Teto de dias alinhado ao contrato de exportação (30/60/90).
@@ -182,18 +205,11 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
             var_listHistoricoSale = await ITADClient.get_price_history(
                 var_intAppid, arg_floatPrecoBase=var_dictSteamData.get("price", 0.0)
             )
-            if var_listHistoricoSale:
-                if any(var_dictPonto.get("fonte") == "mock" for var_dictPonto in var_listHistoricoSale):
-                    var_listWarningsSale.append("A API de histórico de preços (ITAD) está indisponível (chave ausente, limite de requisições ou erro de rede). O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
-                var_dictMaiorDesconto = max(var_listHistoricoSale, key=lambda var_dictPonto: var_dictPonto["desconto"])
-                var_intDescontoAtual = var_dictSteamData.get("discount_percent", 0)
-                var_objHistoricoDesconto = HistoricoDesconto(
-                    eh_maior_historico=var_intDescontoAtual >= var_dictMaiorDesconto["desconto"],
-                    maior_desconto_pct=var_dictMaiorDesconto["desconto"],
-                    data_maior_desconto=datetime.fromtimestamp(var_dictMaiorDesconto["timestamp"]).strftime("%Y-%m-%d"),
-                    janela_anos=CON_INT_JANELA_ANOS_PADRAO,
-                    fonte=var_listHistoricoSale[0].get("fonte", "mock"),
-                )
+            if var_listHistoricoSale and any(var_dictPonto.get("fonte") == "mock" for var_dictPonto in var_listHistoricoSale):
+                var_listWarningsSale.append("A API de histórico de preços (ITAD) está indisponível (chave ausente, limite de requisições ou erro de rede). O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
+            var_objHistoricoDesconto = _calcular_historico_desconto(
+                var_listHistoricoSale, var_dictSteamData.get("discount_percent", 0)
+            )
         except Exception as e:
             logger.warning(f"Falha ao buscar histórico para comparação de desconto (appid {var_intAppid}): {e}")
 
@@ -244,6 +260,9 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
     if var_listHistorico and any(var_dictPonto.get("fonte") == "mock" for var_dictPonto in var_listHistorico):
         var_listWarnings.append("A API de histórico de preços (ITAD) está indisponível (chave ausente, limite de requisições ou erro de rede). O sistema está utilizando um histórico de preços simulado (mock) para a demonstração dos modelos de IA.")
 
+    # Comparação com o desconto histórico (sempre exibida, não só quando já em promoção)
+    var_objHistoricoDesconto = _calcular_historico_desconto(var_listHistorico, 0)
+
     # 4. Features
     var_dfFeatures = gerar_features_para_inferencia(
         arg_floatReviewScore=var_dictSteamData.get("review_score", 0),
@@ -277,6 +296,7 @@ async def predict_by_game(input_data: GameQueryInput, request: Request, debug: b
         game=var_objGameInfo,
         classificacao=var_objClassificacao,
         regressao=var_objRegressao,
+        historico_desconto=var_objHistoricoDesconto,
         features_utilizadas=var_dfFeatures.iloc[0].to_dict() if debug else None,
         warnings=var_listWarnings if var_listWarnings else None,
     )

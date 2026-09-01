@@ -5,9 +5,35 @@ import pandas as pd
 from core.feature_engineering import (
     gerar_features_para_inferencia,
     calcular_dias_proxima_grande_promo,
+    validar_features_modelo,
     CON_LIST_FEATURE_COLUMNS,
     CON_LIST_GRANDES_PROMOCOES_DOY,
 )
+
+
+class FakeModelo:
+    """Simula um modelo sklearn/XGBoost carregado, só para testar validar_features_modelo."""
+    def __init__(self, arg_listFeatures):
+        self.feature_names_in_ = arg_listFeatures
+
+
+class TestValidarFeaturesModelo:
+    """Detecta o cenário que já aconteceu em produção: Fábrica troca uma feature e a inferência fica desatualizada."""
+
+    def test_features_compativeis(self):
+        var_objModelo = FakeModelo(CON_LIST_FEATURE_COLUMNS)
+        assert validar_features_modelo(var_objModelo) is None
+
+    def test_features_incompativeis(self):
+        var_listFeaturesAntigas = list(CON_LIST_FEATURE_COLUMNS)
+        var_listFeaturesAntigas[2] = "preco_atual_hist"  # como no incidente real
+        var_objModelo = FakeModelo(var_listFeaturesAntigas)
+        var_listResultado = validar_features_modelo(var_objModelo)
+        assert var_listResultado == var_listFeaturesAntigas
+
+    def test_modelo_sem_feature_names_in(self):
+        var_objModelo = object()
+        assert validar_features_modelo(var_objModelo) is None
 
 
 class TestDiasProxPromo:

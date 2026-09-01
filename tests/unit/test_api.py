@@ -38,6 +38,24 @@ class TestHealth:
         assert "status" in var_dictData
         assert "models" in var_dictData
         assert "timestamp" in var_dictData
+        assert "features_incompativeis" in var_dictData["models"]
+
+    def test_health_degraded_quando_features_incompativeis(self, client):
+        # Simula o incidente real: modelo carregado, mas com features diferentes
+        # das geradas pela inferência atual. /health precisa reportar "degraded",
+        # nao "healthy" (senao o problema fica invisivel ate alguem tentar prever).
+        var_objModelManager = client.app.state.model_manager
+        var_strHorizonteAtual = var_objModelManager._var_strCurrentHorizon
+        var_dictIssuesOriginal = var_objModelManager._var_dictFeatureIssues.get(var_strHorizonteAtual, {}).copy()
+        try:
+            var_objModelManager._var_dictFeatureIssues.setdefault(var_strHorizonteAtual, {})["classificacao"] = ["feature_antiga"]
+            var_objResponse = client.get("/health")
+            assert var_objResponse.status_code == 200
+            var_dictData = var_objResponse.json()
+            assert var_dictData["status"] == "degraded"
+            assert "classificacao" in var_dictData["models"]["features_incompativeis"]
+        finally:
+            var_objModelManager._var_dictFeatureIssues[var_strHorizonteAtual] = var_dictIssuesOriginal
 
 
 class TestPredict:
@@ -76,6 +94,19 @@ class TestPredict:
         assert var_objResponse.status_code == 200
         var_dictData = var_objResponse.json()
         assert var_dictData["game"]["appid"] == 1245620
+
+    def test_predict_mostra_historico_desconto_mesmo_sem_promocao(self, client):
+        # Pedido do usuário: o maior desconto histórico deve aparecer sempre,
+        # não só quando o jogo já está em promoção.
+        var_objResponse = client.post("/predict/game", json={"query": "1245620"})
+        assert var_objResponse.status_code == 200
+        var_dictData = var_objResponse.json()
+        assert var_dictData["game"]["is_on_sale"] is False
+        var_dictHistorico = var_dictData.get("historico_desconto")
+        assert var_dictHistorico is not None
+        assert var_dictHistorico["maior_desconto_pct"] >= 0
+        assert len(var_dictHistorico["data_maior_desconto"]) == 10
+        assert var_dictHistorico["janela_anos"] == 5
 
     def test_predict_latest_returns_regressao(self, client):
         var_dictHealth = client.get("/health").json()

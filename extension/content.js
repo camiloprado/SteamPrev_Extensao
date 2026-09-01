@@ -411,6 +411,22 @@ function renderizarResultados(arg_dictData) {
     _var_objEls.pillMeta.textContent = "";
   }
 
+  if (var_dictHistoricoDesconto) {
+    const elHistNormal = criarCard(
+      "📊 Desconto Histórico",
+      var_dictHistoricoDesconto.eh_maior_historico
+        ? "🏆 Recorde"
+        : `${var_dictHistoricoDesconto.maior_desconto_pct}%`
+    );
+    const elHistDesc = document.createElement("div");
+    elHistDesc.className = "sp-card-desc";
+    elHistDesc.textContent = var_dictHistoricoDesconto.eh_maior_historico
+      ? `Maior desconto já registrado nos últimos ${var_dictHistoricoDesconto.janela_anos} anos!`
+      : `Maior desconto em ${var_dictHistoricoDesconto.data_maior_desconto} (últimos ${var_dictHistoricoDesconto.janela_anos} anos)`;
+    elHistNormal.appendChild(elHistDesc);
+    _var_objEls.results.appendChild(elHistNormal);
+  }
+
   _var_objEls.pillText.textContent = var_dictGame.name || "Previsor Steam";
 }
 

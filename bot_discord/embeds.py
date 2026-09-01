@@ -63,7 +63,7 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
         inline=True,
     )
 
-    # Comparação com o desconto histórico (só presente quando já está em promoção)
+    # Comparação com o desconto histórico — sempre exibida, não só quando já está em promoção
     if var_dictHistoricoDesconto:
         var_intJanela = var_dictHistoricoDesconto["janela_anos"]
         if var_dictHistoricoDesconto["eh_maior_historico"]:
@@ -74,7 +74,7 @@ def embed_previsao(arg_dictData: dict) -> discord.Embed:
                 f"em {var_dictHistoricoDesconto['data_maior_desconto']} (últimos {var_intJanela} anos)."
             )
         var_objEmbed.add_field(
-            name="🎉 Desconto Ativo",
+            name="🎉 Desconto Ativo" if var_dictGame.get("is_on_sale") else "📊 Desconto Histórico",
             value=var_strHistoricoValor,
             inline=False,
         )
